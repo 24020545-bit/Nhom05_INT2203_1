@@ -40,32 +40,18 @@ public class Explosion {
             }
         }, 500); // 500ms = 0.5 giây (bạn có thể đổi thành 300ms hoặc 1000ms tùy ý)
     }
-
-    /**
-     * Xử lý khi vụ nổ kết thúc
-     */
+//khi ket tuc vuu no thi sao
     public void finish() {
-
-        // Khối đồng bộ hóa (synchronized) dựa trên đối tượng hiện tại (this)
-        // Đảm bảo chỉ có một luồng (thread) duy nhất được thực hiện kiểm tra và đổi trạng thái tại một thời điểm
         synchronized (this) {
-            // Kiểm tra xem vụ nổ đã được kết thúc trước đó chưa
             if (isFinished) {
-                return; // Nếu đã kết thúc rồi thì thoát luôn, tránh xử lý trùng lặp
+                return;
             }
-            // Đánh dấu trạng thái vụ nổ là đã hoàn thành
             this.isFinished = true;
         }
-        // Tự động yêu cầu GameMap xóa vụ nổ này ra khỏi danh sách hiển thị
         if (gameMap != null) {
             gameMap.removeExplosion(this);
         }
     }
-
-    // ==========================================
-    // GETTERS & SETTERS
-    // ==========================================
-
     public int getX() {
         return x;
     }
