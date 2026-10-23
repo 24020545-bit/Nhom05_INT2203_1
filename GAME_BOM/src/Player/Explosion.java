@@ -1,3 +1,5 @@
+package Player;
+
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -6,7 +8,7 @@ public class Explosion {
     private int y;              // Tọa độ Y trên bản đồ
     private int power;          // Bán kính ngọn lửa lan rộng
     private boolean isFinished; // Trạng thái báo hiệu vụ nổ đã kết thúc
-    private GameMap gameMap;    // Tham chiếu đến bản đồ để tự xóa khi hết giờ
+    private Map.GameMap gameMap;    // Tham chiếu đến bản đồ để tự xóa khi hết giờ
 
     /**
      * Constructor khởi tạo vụ nổ
@@ -15,7 +17,7 @@ public class Explosion {
      * @param power Bán kính nổ
      * @param gameMap Bản đồ game (để tự loại bỏ vụ nổ khi hết thời gian)
      */
-    public Explosion(int x, int y, int power, GameMap gameMap) {
+    public Explosion(int x, int y, int power, Map.GameMap gameMap) {
         this.x = x;
         this.y = y;
         this.power = power;
@@ -56,9 +58,9 @@ public class Explosion {
             // Đánh dấu trạng thái vụ nổ là đã hoàn thành
             this.isFinished = true;
         }
-        // Tự động yêu cầu GameMap xóa vụ nổ này ra khỏi danh sách hiển thị
+        // Tự động yêu cầu Map.GameMap xóa vụ nổ này ra khỏi danh sách hiển thị
         if (gameMap != null) {
-            gameMap.removeExplosion(this);
+//            gameMap.removeExplosion(this);
         }
     }
 

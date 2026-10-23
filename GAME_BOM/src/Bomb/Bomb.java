@@ -1,3 +1,8 @@
+package Bomb;
+
+import Player.Explosion;
+import Player.PlayerOb;
+
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -5,9 +10,9 @@ public class Bomb {
     // Các thuộc tính riêng tư (Encapsulation)
     private int x;
     private int y;
-    private int power;          // Bán kính nổ (được lấy từ thuộc tính power của PlayerOb)
-    private PlayerOb owner;     // Người chơi/Bot đã đặt quả bom này
-    private GameMap gameMap;    // Tham chiếu bản đồ để thêm vụ nổ khi bom nổ
+    private int power;          // Bán kính nổ (được lấy từ thuộc tính power của Player.PlayerOb)
+    private PlayerOb owner;     // Người chơi/Player.Bot đã đặt quả bom này
+    private Map.GameMap gameMap;    // Tham chiếu bản đồ để thêm vụ nổ khi bom nổ
     private boolean isExploded; // Trạng thái kiểm tra bom đã nổ chưa
     private Timer timer;        // Giữ đối tượng Timer để có thể hủy hẹn giờ nếu nổ sớm
 
@@ -19,7 +24,7 @@ public class Bomb {
      * @param owner Người sở hữu bom
      * @param gameMap Bản đồ game chứa quả bom
      */
-    public Bomb(int x, int y, int power, PlayerOb owner, GameMap gameMap) {
+    public Bomb(int x, int y, int power, PlayerOb owner, Map.GameMap gameMap) {
         this.x = x;
         this.y = y;
         this.power = power;
@@ -65,11 +70,11 @@ public class Bomb {
         // 1. Tạo đối tượng vụ nổ (Explosion) tại vị trí quả bom (truyền gameMap vào)
         Explosion explosion = new Explosion(this.x, this.y, this.power, this.gameMap);
 
-        // 2. Thêm vụ nổ vào danh sách quản lý của GameMap
-        if (gameMap != null) {
-            gameMap.addExplosion(explosion);
-            gameMap.removeBomb(this); // Xóa quả bom này khỏi danh sách bom trên bản đồ
-        }
+        // 2. Thêm vụ nổ vào danh sách quản lý của Map.GameMap
+//        if (gameMap != null) {
+//            gameMap.addExplosion(explosion);
+//            gameMap.removeBomb(this); // Xóa quả bom này khỏi danh sách bom trên bản đồ
+//        }
 
         // 3. Trả lại số lượng bom active cho người chơi sở hữu
         if (owner != null) {

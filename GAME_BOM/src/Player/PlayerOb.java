@@ -1,5 +1,11 @@
+package Player;
+
+import Bomb.Bomb;
+
+import java.util.Timer;
+import java.util.TimerTask;
+
 public abstract class PlayerOb {
-    // Các thuộc tính riêng tư/được bảo vệ theo biểu đồ UML
     protected int x;
     protected int y;
     protected double speed;
@@ -7,13 +13,11 @@ public abstract class PlayerOb {
     protected int bombLimit;
     protected int activeBombCount;
     protected boolean isAlive;
-
-    // Thuộc tính mở rộng để quả bom biết bán kính nổ (power) của người đặt
     protected int power;
 
-    /**
-     * Constructor khởi tạo thông tin cho nhân vật
-     */
+    // Thêm biến trạng thái kiểm tra có đang trong thời gian bất tử hay không
+    protected boolean isInvulnerable = false;
+
     public PlayerOb(int x, int y, double speed, int lives, int bombLimit, int power) {
         this.x = x;
         this.y = y;
@@ -25,60 +29,51 @@ public abstract class PlayerOb {
         this.isAlive = true;
     }
 
-    /**
-     * Phương thức di chuyển theo hướng truyền vào (Abstract để Player và Bot tự định nghĩa)
-     */
     public abstract void move(Direction direction);
 
-    /**
-     * Phương thức đặt bom[cite: 1]
-     * @param gameMap Bản đồ hiện tại để truyền vào quả bom
-     */
-    public void placeBomb(GameMap gameMap) {
-        // Nếu nhân vật đã chết thì không thể đặt bom
-        if (!isAlive) {
-            return;
-        }
-
-        // Kiểm tra xem số lượng bom đang đặt có vượt quá giới hạn (bombLimit) không
-        if (activeBombCount < bombLimit) {
-            // Tạo quả bom mới tại tọa độ hiện tại của nhân vật
-            Bomb newBomb = new Bomb(this.x, this.y, this.power, this, gameMap);
-
-            // Thêm bom vào danh sách quản lý của bản đồ
-            if (gameMap != null) {
-                gameMap.addBomb(newBomb);
-            }
-
-            // Tăng số lượng bom đang hoạt động của nhân vật lên
-            activeBombCount++;
-        }
-    }
+//    public void placeBomb(Map.GameMap gameMap) {
+//        if (!isAlive) return;
+//
+//        if (activeBombCount < bombLimit) {
+//            Bomb newBomb = new Bomb(this.x, this.y, this.power, this, gameMap);
+//            if (gameMap != null) {
+//                gameMap.addBomb(newBomb);
+//            }
+//            activeBombCount++;
+//        }
+//    }
 
     /**
-     * Phương thức nhận sát thương[cite: 1] khi chạm lửa hoặc kẻ địch
+     * Phương thức nhận sát thương sử dụng Timer để đếm thời gian bất tử đúng 1 giây
      */
     public void takeDamage() {
-        if (!isAlive) {
-            return;
+        if (!isAlive || isInvulnerable) {
+            return; // Nếu đã chết hoặc đang bất tử thì bỏ qua
         }
 
         lives--;
         if (lives <= 0) {
             die();
+        } else {
+            // Kích hoạt trạng thái bất tử tạm thời và dùng Timer đếm đúng 1 giây (1000ms)
+            isInvulnerable = true;
+            Timer invulnerableTimer = new Timer();
+            invulnerableTimer.schedule(new TimerTask() {
+                @Override
+                public void run() {
+                    isInvulnerable = false; // Hết 1 giây thì tắt trạng thái bất tử
+                    invulnerableTimer.cancel();
+                }
+            }, 1000); // Đếm chính xác 1000ms = 1 giây
         }
     }
 
-    /**
-     * Phương thức xử lý khi nhân vật chết[cite: 1]
-     */
     public void die() {
         this.isAlive = false;
-        // Các logic phụ trợ khi chết (ví dụ: phát âm thanh, dừng di chuyển, v.v.)
     }
 
     // ==========================================
-    // GETTERS & SETTERS (Phục vụ quản lý trạng thái)
+    // GETTERS & SETTERS
     // ==========================================
 
     public int getX() { return x; }
