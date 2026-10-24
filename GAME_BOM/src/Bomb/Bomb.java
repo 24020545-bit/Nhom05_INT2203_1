@@ -41,25 +41,16 @@ public class Bomb {
 
     public void explode() {
         synchronized (this) {
-            if (isExploded) {
-                return;
-            }
+            if (isExploded) return;
             this.isExploded = true;
-
-            if (timer != null) {
-                timer.cancel();
-            }
+            if (timer != null) timer.cancel();
         }
 
-        // 1. Tạo vụ nổ (phá tường gạch ngay lập tức)
-        Explosion explosion = new Explosion(this.x, this.y, this.power, this.gameMap);
-
-        // 2. Đưa vụ nổ vào BombManager để vẽ hiệu ứng lửa
+        // Nhờ BombManager kích hoạt hiệu ứng và quét sát thương
         if (bombManager != null) {
-            bombManager.addExplosion(explosion);
+            bombManager.triggerExplosion(this.x, this.y, this.power);
         }
 
-        // 3. Trả lại giới hạn bom cho người chơi
         if (owner != null) {
             int currentActive = owner.getActiveBombCount();
             if (currentActive > 0) {

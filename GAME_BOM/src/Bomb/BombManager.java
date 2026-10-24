@@ -10,11 +10,13 @@ import java.util.List;
 
 public class BombManager {
     private List<Bomb> activeBombs;
-    private List<Explosion> activeExplosions; // Danh sách quản lý các vụ nổ đang cháy
+    private List<Explosion> activeExplosions;
     private GameMap gameMap;
+    private List<PlayerOb> players; // Thêm danh sách người chơi/bot vào đây
 
-    public BombManager(GameMap gameMap) {
+    public BombManager(GameMap gameMap, List<PlayerOb> players) {
         this.gameMap = gameMap;
+        this.players = players;
         this.activeBombs = new ArrayList<>();
         this.activeExplosions = new ArrayList<>();
     }
@@ -26,42 +28,75 @@ public class BombManager {
             }
         }
 
-        // Truyền thêm 'this' (BombManager) vào để quả bom có thể thêm vụ nổ khi kích hoạt
         Bomb newBomb = new Bomb(x, y, power, owner, gameMap, this);
         activeBombs.add(newBomb);
         return true;
+    }
+
+    // Khi bom nổ, BombManager sẽ đồng thời kiểm tra sát thương cho toàn bộ players luôn
+    public void triggerExplosion(int bombX, int bombY, int power) {
+        Explosion explosion = new Explosion(bombX, bombY, power, gameMap);
+        activeExplosions.add(explosion);
+
+        // Kiểm tra xem ngọn lửa có trúng player hay bot nào không
+        checkExplosionDamage(explosion);
+    }
+
+    private void checkExplosionDamage(Explosion exp) {
+        if (players == null) return;
+
+        int bX = exp.getX();
+        int bY = exp.getY();
+        int power = exp.getPower();
+
+        for (PlayerOb p : players) {
+            if (!p.isAlive()) continue;
+
+            int pX = (int) Math.round(p.getX());
+            int pY = (int) Math.round(p.getY());
+
+            // Kiểm tra xem nhân vật có nằm trong vùng ảnh hưởng của vụ nổ không
+            if (isInExplosionArea(pX, pY, bX, bY, power)) {
+                p.takeDamage(); // Trừ máu nhân vật/bot an toàn
+            }
+        }
+    }
+
+    private boolean isInExplosionArea(int pX, int pY, int bX, int bY, int power) {
+        if (pX == bX && pY == bY) return true;
+
+        int[][] directions = {{0, -1}, {0, 1}, {-1, 0}, {1, 0}};
+        for (int[] d : directions) {
+            for (int i = 1; i <= power; i++) {
+                int fireX = bX + (d[0] * i);
+                int fireY = bY + (d[1] * i);
+
+                // Gặp tường thì sóng lửa dừng lại
+                if (!gameMap.isWalkable(fireX, fireY) && gameMap.getTile(fireX, fireY) != GameMap.EMPTY) {
+                    // Nếu là gạch thì vẫn tính là dính lửa ở ô đó trước khi gạch bị phá
+                    if (gameMap.getTile(fireX, fireY) == GameMap.WALL_BRICK) {
+                        if (pX == fireX && pY == fireY) return true;
+                    }
+                    break;
+                }
+
+                if (pX == fireX && pY == fireY) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     public void addExplosion(Explosion explosion) {
         activeExplosions.add(explosion);
     }
 
-    // Cập nhật trạng thái định kỳ: dọn dẹp bom đã nổ và vụ nổ đã hết thời gian (0.5s)
     public void update() {
-        // Dọn dẹp bom đã nổ
-        Iterator<Bomb> bombIterator = activeBombs.iterator();
-        while (bombIterator.hasNext()) {
-            Bomb bomb = bombIterator.next();
-            if (bomb.isExploded()) {
-                bombIterator.remove();
-            }
-        }
-
-        // Dọn dẹp hiệu ứng vụ nổ sau khi hết giờ
-        Iterator<Explosion> explosionIterator = activeExplosions.iterator();
-        while (explosionIterator.hasNext()) {
-            Explosion explosion = explosionIterator.next();
-            if (explosion.isFinished()) {
-                explosionIterator.remove();
-            }
-        }
+        activeBombs.removeIf(Bomb::isExploded);
+        activeExplosions.removeIf(Explosion::isFinished);
     }
 
-    public List<Bomb> getActiveBombs() {
-        return activeBombs;
-    }
-
-    public List<Explosion> getActiveExplosions() {
-        return activeExplosions;
-    }
+    public List<Bomb> getActiveBombs() { return activeBombs; }
+    public List<Explosion> getActiveExplosions() { return activeExplosions; }
 }

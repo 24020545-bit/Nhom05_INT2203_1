@@ -12,6 +12,8 @@ public class ExplosionRenderer {
         if (activeExplosions == null || activeExplosions.isEmpty() || gameMap == null) return;
 
         char[][] grid = gameMap.getGrid();
+        int mapWidth = gameMap.getWidth();
+        int mapHeight = gameMap.getHeight();
 
         for (Explosion exp : activeExplosions) {
             if (exp.isFinished()) continue;
@@ -39,20 +41,19 @@ public class ExplosionRenderer {
                     int targetX = x + (dx * i);
                     int targetY = y + (dy * i);
 
-                    // Kiểm tra biên bản đồ
-                    if (targetX < 0 || targetX >= GameMap.SIZE || targetY < 0 || targetY >= GameMap.SIZE) {
+                    // Kiểm tra biên bản đồ động theo gameMap
+                    if (targetX < 0 || targetX >= mapWidth || targetY < 0 || targetY >= mapHeight) {
                         break; // Ra khỏi biên -> dừng hướng này
                     }
 
                     char tile = grid[targetY][targetX];
 
-                    // Gặp Tường đá (#): Sóng lửa bị chặn lại hoàn toàn, KHÔNG vẽ qua ô này và dừng hướng này
+                    // Gặp Tường đá (#): Sóng lửa bị chặn lại hoàn toàn
                     if (tile == GameMap.WALL_SOLID) {
                         break;
                     }
 
-                    // Gặp Tường gạch (X): Lửa vẫn vẽ đè lên viên gạch đó (vì gạch đang nổ),
-                    // nhưng sau ô này thì sóng lửa bị chặn lại, không lan tiếp nữa
+                    // Gặp Tường gạch (X): Lửa vẫn vẽ đè lên viên gạch đó nhưng chặn lan tiếp
                     if (tile == GameMap.WALL_BRICK) {
                         drawFlameTile(g2d, targetX, targetY, tileSize);
                         break;

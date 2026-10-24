@@ -1,97 +1,109 @@
 package Map;
 
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
 
 public class GameMap {
-    public static final int SIZE = 30;
-
-    // Các ký hiệu trên bản đồ
     public static final char EMPTY = ' ';      // Đường đi (ô trống)
     public static final char WALL_SOLID = '#';  // Tường cố định (không phá được)
     public static final char WALL_BRICK = 'X'; // Tường gạch (phá được bằng bom)
 
-    // Danh sách lưu trữ chính xác 4 map cố định
     private List<char[][]> mapList;
     private int currentMapIndex;
 
     public GameMap() {
         mapList = new ArrayList<>();
 
-        // Khởi tạo và nạp sẵn 4 map vào danh sách
-        mapList.add(createMap1_Classic());
+        // Đọc danh sách map từ file txt (ví dụ: "maps.txt")
+        loadMapsFromFile("map.txt");
 
+        // Nếu file trống hoặc lỗi, tạo sẵn 1 map mặc định để tránh crash game
+        if (mapList.isEmpty()) {
+            String[] defaultMap = {
+                    "#########",
+                    "#.......#",
+                    "#.###.#.#",
+                    "#.#...#.#",
+                    "#########"
+            };
+            mapList.add(parseStringToMap(defaultMap));
+        }
 
-        currentMapIndex = 0; // Mặc định chọn Map 1
+        currentMapIndex = 0;
     }
 
-    // ==========================================
-    // THIẾT KẾ 4 MAP CỐ ĐỊNH
-    // ==========================================
+    /**
+     * Đọc file txt chứa nhiều map được ngăn cách bởi dòng "---"
+     */
+    private void loadMapsFromFile(String filePath) {
+        List<String> currentMapLines = new ArrayList<>();
 
-    // Hàm chuyển đổi cải tiến: Dùng dấu chấm '.' làm đường đi để dễ nhìn và không sợ lệch cột
+        try (InputStream is = getClass().getClassLoader().getResourceAsStream(filePath);
+             BufferedReader reader = is != null ? new BufferedReader(new InputStreamReader(is))
+                     : new BufferedReader(new FileReader(filePath))) {
+
+            String line;
+            while ((line = reader.readLine()) != null) {
+                line = line.trim();
+                // Nếu gặp dòng phân cách hoặc dòng trống kết thúc 1 map
+                if (line.equals("---")) {
+                    if (!currentMapLines.isEmpty()) {
+                        mapList.add(parseStringToMap(currentMapLines.toArray(new String[0])));
+                        currentMapLines.clear();
+                    }
+                } else if (!line.isEmpty()) {
+                    currentMapLines.add(line);
+                }
+            }
+
+            // Thêm map cuối cùng nếu file không kết thúc bằng "---"
+            if (!currentMapLines.isEmpty()) {
+                mapList.add(parseStringToMap(currentMapLines.toArray(new String[0])));
+            }
+
+        } catch (IOException e) {
+            System.err.println("Không thể đọc file bản đồ: " + filePath + " (" + e.getMessage() + ")");
+        }
+    }
+
     private char[][] parseStringToMap(String[] mapTemplate) {
-        char[][] grid = new char[SIZE][SIZE];
+        int height = mapTemplate.length;
+        int width = 0;
+        for (String row : mapTemplate) {
+            if (row.length() > width) {
+                width = row.length();
+            }
+        }
 
-        for (int y = 0; y < SIZE; y++) {
-            String rowStr = (y < mapTemplate.length) ? mapTemplate[y] : "";
+        char[][] grid = new char[height][width];
 
-            for (int x = 0; x < SIZE; x++) {
+        for (int y = 0; y < height; y++) {
+            String rowStr = mapTemplate[y];
+            for (int x = 0; x < width; x++) {
                 if (x < rowStr.length()) {
                     char c = rowStr.charAt(x);
-                    // Quy ước ký tự trong chuỗi sang ký tự của game:
                     if (c == '.') {
-                        grid[y][x] = EMPTY;     // Dấu chấm là đường đi
+                        grid[y][x] = EMPTY;
                     } else {
-                        grid[y][x] = c;         // Giữ nguyên # hoặc X
+                        grid[y][x] = c;
                     }
                 } else {
-                    grid[y][x] = EMPTY;         // Mặc định nếu thiếu ký tự
+                    grid[y][x] = EMPTY;
                 }
             }
         }
         return grid;
     }
 
-    // Bản đồ 30x30
-    // Map 1: Cổ điển (Classic Bomberman style)
-    private char[][] createMap1_Classic() {
-        String[] customDesign = {
-                "#################",
-                "#...#XXXXX#XXX..#",
-                "#.#.#X#####X###.#",
-                "#X#.XXXXXXXXX#XX#",
-                "#X#.#X#X####X#X##",
-                "#X#X#X#XXXXXXXXX#",
-                "#X#X#X#X#######X#",
-                "#X#X#X###XXXXXXX#",
-                "#XXX#XXXXX##X####",
-                "#X###X###X#XXXXX#",
-                "#XXX#XXX#XXX#####",
-                "#X#X#X#X#X#X#XXX#",
-                "#X#XXX#X#X#X###X#",
-                "#X#X###X#X#X#XXX#",
-                "#X#XXX#X#X#XXX#X#",
-                "#X#X#X#X#####X#X#",
-                "#XXX#X#XXXXXXX#X#",
-                "###X#X#########X#",
-                "#XXX#XXXXXX#XXXX#",
-                "#.###X####X#X##.#",
-                "#..XXXXXX#XXXX..#",
-                "#################"
-        };
-
-        return parseStringToMap(customDesign);
-    }
-
-    // Phương thức để bạn có thể thêm map tùy chỉnh thủ công bên ngoài nếu muốn
-    public void addCustomMap(char[][] customGrid) {
-        if (customGrid.length == SIZE && customGrid[0].length == SIZE) {
-            mapList.add(customGrid);
-        }
-    }
-
     public char[][] getGrid() {
+        if (mapList.isEmpty()) {
+            return new char[0][0];
+        }
         return mapList.get(currentMapIndex);
     }
 
@@ -105,19 +117,29 @@ public class GameMap {
         return currentMapIndex;
     }
 
+    public int getMapCount() {
+        return mapList.size();
+    }
+
+    public int getWidth() {
+        char[][] grid = getGrid();
+        return (grid.length > 0) ? grid[0].length : 0;
+    }
+
+    public int getHeight() {
+        return getGrid().length;
+    }
+
     public char getTile(int x, int y) {
         char[][] currentGrid = getGrid();
-        if (x < 0 || x >= SIZE || y < 0 || y >= SIZE) return WALL_SOLID;
+        if (x < 0 || x >= getWidth() || y < 0 || y >= getHeight()) return WALL_SOLID;
         return currentGrid[y][x];
     }
 
     public boolean isWalkable(int x, int y) {
-        if (x < 0 || x >= SIZE || y < 0 || y >= SIZE) {
+        if (x < 0 || x >= getWidth() || y < 0 || y >= getHeight()) {
             return false;
         }
-
         return getTile(x, y) == EMPTY;
     }
-
-
 }

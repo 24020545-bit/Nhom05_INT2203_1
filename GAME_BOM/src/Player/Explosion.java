@@ -36,9 +36,11 @@ public class Explosion {
         if (gameMap == null) return;
 
         char[][] grid = gameMap.getGrid();
+        int mapWidth = gameMap.getWidth();
+        int mapHeight = gameMap.getHeight();
 
         // 1. Xử lý phá hủy ngay tại ô tâm quả bom (nếu là gạch)
-        destroyTile(grid, x, y);
+        destroyTile(grid, x, y, mapWidth, mapHeight);
 
         // 2. Các hướng lan: Lên, Xuống, Trái, Phải
         int[][] directions = {
@@ -57,8 +59,8 @@ public class Explosion {
                 int targetX = x + (dx * i);
                 int targetY = y + (dy * i);
 
-                // Kiểm tra nếu vượt quá biên bản đồ thì dừng hướng này lại
-                if (targetX < 0 || targetX >= GameMap.SIZE || targetY < 0 || targetY >= GameMap.SIZE) {
+                // Kiểm tra nếu vượt quá biên bản đồ động thì dừng hướng này lại
+                if (targetX < 0 || targetX >= mapWidth || targetY < 0 || targetY >= mapHeight) {
                     break;
                 }
 
@@ -76,7 +78,6 @@ public class Explosion {
                 }
 
                 // Nếu là ô trống (EMPTY): Lửa tiếp tục lan qua
-                // (Sau này bạn có thể check thêm va chạm với Player/Bot tại đây để trừ máu)
             }
         }
     }
@@ -84,8 +85,8 @@ public class Explosion {
     /**
      * Hàm phụ trợ kiểm tra và phá hủy ô gạch tại tọa độ chỉ định
      */
-    private void destroyTile(char[][] grid, int tileX, int tileY) {
-        if (tileX >= 0 && tileX < GameMap.SIZE && tileY >= 0 && tileY < GameMap.SIZE) {
+    private void destroyTile(char[][] grid, int tileX, int tileY, int mapWidth, int mapHeight) {
+        if (tileX >= 0 && tileX < mapWidth && tileY >= 0 && tileY < mapHeight) {
             if (grid[tileY][tileX] == GameMap.WALL_BRICK) {
                 grid[tileY][tileX] = GameMap.EMPTY;
             }

@@ -9,9 +9,12 @@ public class MapRenderer {
         if (gameMap == null) return;
 
         char[][] grid = gameMap.getGrid();
+        int mapWidth = gameMap.getWidth();
+        int mapHeight = gameMap.getHeight();
 
-        for (int y = 0; y < GameMap.SIZE; y++) {
-            for (int x = 0; x < GameMap.SIZE; x++) {
+        // Sử dụng kích thước động từ gameMap thay vì GameMap.SIZE cứng
+        for (int y = 0; y < mapHeight; y++) {
+            for (int x = 0; x < mapWidth; x++) {
                 int drawX = x * tileSize;
                 int drawY = y * tileSize;
                 char tile = grid[y][x];

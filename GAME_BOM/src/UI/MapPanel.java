@@ -2,14 +2,16 @@ package UI;
 
 import Bomb.BombManager;
 import Map.GameMap;
-import Player.Player;
+import Player.PlayerOb;
+import Player.Bot;
 
 import javax.swing.*;
 import java.awt.*;
+import java.util.List;
 
 public class MapPanel extends JPanel {
     private final GameMap gameMap;
-    private final Player player;
+    private final List<PlayerOb> players;
     private final BombManager bombManager;
     private boolean showGrid = true;
     private static final int TILE_SIZE = 22;
@@ -18,14 +20,15 @@ public class MapPanel extends JPanel {
         this(gameMap, null, null);
     }
 
-    public MapPanel(GameMap gameMap, Player player, BombManager bombManager) {
+    public MapPanel(GameMap gameMap, List<PlayerOb> players, BombManager bombManager) {
         this.gameMap = gameMap;
-        this.player = player;
+        this.players = players;
         this.bombManager = bombManager;
 
-        // Đã sửa lại lỗi cú pháp phép nhân (*)
-        int dimension = GameMap.SIZE * TILE_SIZE;
-        setPreferredSize(new Dimension(dimension, dimension));
+        int widthPx = gameMap.getWidth() * TILE_SIZE;
+        int heightPx = gameMap.getHeight() * TILE_SIZE;
+        setPreferredSize(new Dimension(widthPx, heightPx));
+
         setBackground(new Color(34, 139, 34));
     }
 
@@ -41,23 +44,44 @@ public class MapPanel extends JPanel {
         Graphics2D g2d = (Graphics2D) g;
         g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-        // 1. Vẽ bản đồ (Lớp dưới cùng)
+        // 1. Tính toán khoảng cách canh giữa (Offset) để bản đồ nằm giữa màn hình
+        int totalMapWidthPx = gameMap.getWidth() * TILE_SIZE;
+        int totalMapHeightPx = gameMap.getHeight() * TILE_SIZE;
+
+        int offsetX = Math.max(0, (getWidth() - totalMapWidthPx) / 2);
+        int offsetY = Math.max(0, (getHeight() - totalMapHeightPx) / 2);
+
+        // 2. Dịch chuyển hệ tọa độ g2d để gom bản đồ, bom, lửa và nhân vật vào giữa khung hình
+        g2d.translate(offsetX, offsetY);
+
+        // - Vẽ bản đồ (Lớp dưới cùng)
         MapRenderer.draw(g2d, gameMap, TILE_SIZE, showGrid);
 
-        // 2. Vẽ hiệu ứng lửa vụ nổ (Đã bổ sung thêm tham số gameMap vào đây)
+        // - Vẽ hiệu ứng lửa vụ nổ
         if (bombManager != null) {
             ExplosionRenderer.draw(g2d, bombManager.getActiveExplosions(), gameMap, TILE_SIZE);
         }
 
-        // 3. Vẽ Bom (Lớp trên lửa)
+        // - Vẽ Bom (Lớp trên lửa)
         if (bombManager != null) {
             BombRenderer.draw(g2d, bombManager, TILE_SIZE);
         }
 
-        // 4. Vẽ Người chơi (Lớp trên cùng)
-        if (player != null) {
-            EntityRenderer.draw(g2d, player, TILE_SIZE, Color.RED);
+        // - Vẽ tất cả Người chơi và Bot (Lớp trên cùng)
+        if (players != null) {
+            for (PlayerOb p : players) {
+                if (p.isAlive()) {
+                    Color color = (p instanceof Bot) ? Color.BLUE : Color.RED;
+                    EntityRenderer.draw(g2d, p, TILE_SIZE, color);
+                }
+            }
         }
+
+        // Trả lại hệ tọa độ ban đầu để vẽ HUD cố định
+        g2d.translate(-offsetX, -offsetY);
+
+        // 3. Vẽ khung HUD phân bố ở 4 góc màn hình
+        HUDPanel.draw(g2d, players, getWidth(), getHeight());
     }
 
     public static int getTileSize() {
