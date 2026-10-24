@@ -1,5 +1,7 @@
 package Player;
 
+import Map.GameMap;
+
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -8,59 +10,116 @@ public class Explosion {
     private int y;              // Tọa độ Y trên bản đồ
     private int power;          // Bán kính ngọn lửa lan rộng
     private boolean isFinished; // Trạng thái báo hiệu vụ nổ đã kết thúc
-    private Map.GameMap gameMap;    // Tham chiếu đến bản đồ để tự xóa khi hết giờ
+    private GameMap gameMap;    // Tham chiếu đến bản đồ
 
     /**
      * Constructor khởi tạo vụ nổ
-     * @param x Tọa độ X
-     * @param y Tọa độ Y
-     * @param power Bán kính nổ
-     * @param gameMap Bản đồ game (để tự loại bỏ vụ nổ khi hết thời gian)
      */
-    public Explosion(int x, int y, int power, Map.GameMap gameMap) {
+    public Explosion(int x, int y, int power, GameMap gameMap) {
         this.x = x;
         this.y = y;
         this.power = power;
         this.gameMap = gameMap;
         this.isFinished = false;
 
-        startTimer(); // Tự động hẹn giờ kết thúc vụ nổ
+        // 1. Thực hiện phá tường và lan rộng lửa ngay khi bom nổ
+        processExplosion();
+
+        // 2. Hẹn giờ tự động tắt lửa sau 500ms
+        startTimer();
     }
 
     /**
-     * Hẹn giờ tồn tại của vụ nổ (ví dụ: 500 mili-giây = 0.5 giây)
+     * Logic lan rộng ngọn lửa ra 4 hướng và phá hủy tường gạch
+     */
+    private void processExplosion() {
+        if (gameMap == null) return;
+
+        char[][] grid = gameMap.getGrid();
+
+        // 1. Xử lý phá hủy ngay tại ô tâm quả bom (nếu là gạch)
+        destroyTile(grid, x, y);
+
+        // 2. Các hướng lan: Lên, Xuống, Trái, Phải
+        int[][] directions = {
+                {0, -1}, // Lên
+                {0, 1},  // Xuống
+                {-1, 0}, // Trái
+                {1, 0}   // Phải
+        };
+
+        for (int[] dir : directions) {
+            int dx = dir[0];
+            int dy = dir[1];
+
+            // Lan rộng từ 1 ô đến hết bán kính power
+            for (int i = 1; i <= power; i++) {
+                int targetX = x + (dx * i);
+                int targetY = y + (dy * i);
+
+                // Kiểm tra nếu vượt quá biên bản đồ thì dừng hướng này lại
+                if (targetX < 0 || targetX >= GameMap.SIZE || targetY < 0 || targetY >= GameMap.SIZE) {
+                    break;
+                }
+
+                char tile = grid[targetY][targetX];
+
+                // Gặp tường đá cố định (#): Chặn hoàn toàn sóng nổ, không lan tiếp, không phá được
+                if (tile == GameMap.WALL_SOLID) {
+                    break;
+                }
+
+                // Gặp tường gạch (X): Phá hủy thành đường đi (EMPTY), đồng thời dừng sóng nổ hướng này
+                if (tile == GameMap.WALL_BRICK) {
+                    grid[targetY][targetX] = GameMap.EMPTY;
+                    break;
+                }
+
+                // Nếu là ô trống (EMPTY): Lửa tiếp tục lan qua
+                // (Sau này bạn có thể check thêm va chạm với Player/Bot tại đây để trừ máu)
+            }
+        }
+    }
+
+    /**
+     * Hàm phụ trợ kiểm tra và phá hủy ô gạch tại tọa độ chỉ định
+     */
+    private void destroyTile(char[][] grid, int tileX, int tileY) {
+        if (tileX >= 0 && tileX < GameMap.SIZE && tileY >= 0 && tileY < GameMap.SIZE) {
+            if (grid[tileY][tileX] == GameMap.WALL_BRICK) {
+                grid[tileY][tileX] = GameMap.EMPTY;
+            }
+        }
+    }
+
+    /**
+     * Hẹn giờ tồn tại của vụ nổ (0.5 giây)
      */
     public void startTimer() {
         Timer timer = new Timer();
 
-        // Sau 500ms, vụ nổ sẽ tự động kết thúc
         timer.schedule(new TimerTask() {
             @Override
             public void run() {
                 finish();
-                timer.cancel(); // Hủy timer sau khi chạy xong
+                timer.cancel();
             }
-        }, 500); // 500ms = 0.5 giây (bạn có thể đổi thành 300ms hoặc 1000ms tùy ý)
+        }, 500); // 500 mili-giây
     }
 
     /**
      * Xử lý khi vụ nổ kết thúc
      */
     public void finish() {
-
-        // Khối đồng bộ hóa (synchronized) dựa trên đối tượng hiện tại (this)
-        // Đảm bảo chỉ có một luồng (thread) duy nhất được thực hiện kiểm tra và đổi trạng thái tại một thời điểm
         synchronized (this) {
-            // Kiểm tra xem vụ nổ đã được kết thúc trước đó chưa
             if (isFinished) {
-                return; // Nếu đã kết thúc rồi thì thoát luôn, tránh xử lý trùng lặp
+                return;
             }
-            // Đánh dấu trạng thái vụ nổ là đã hoàn thành
             this.isFinished = true;
         }
-        // Tự động yêu cầu Map.GameMap xóa vụ nổ này ra khỏi danh sách hiển thị
+
         if (gameMap != null) {
-//            gameMap.removeExplosion(this);
+            // gameMap.removeExplosion(this);
         }
     }
 
