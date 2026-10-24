@@ -1,24 +1,17 @@
 package Player;
 
-import Bomb.Bomb;
-
-import java.util.Timer;
-import java.util.TimerTask;
-
 public abstract class PlayerOb {
-    protected int x;
-    protected int y;
+    protected double x; // Chuyển sang double
+    protected double y; // Chuyển sang double
     protected double speed;
     protected int lives;
     protected int bombLimit;
     protected int activeBombCount;
     protected boolean isAlive;
     protected int power;
-
-    // Thêm biến trạng thái kiểm tra có đang trong thời gian bất tử hay không
     protected boolean isInvulnerable = false;
 
-    public PlayerOb(int x, int y, double speed, int lives, int bombLimit, int power) {
+    public PlayerOb(double x, double y, double speed, int lives, int bombLimit, int power) {
         this.x = x;
         this.y = y;
         this.speed = speed;
@@ -31,40 +24,24 @@ public abstract class PlayerOb {
 
     public abstract void move(Direction direction);
 
-//    public void placeBomb(Map.GameMap gameMap) {
-//        if (!isAlive) return;
-//
-//        if (activeBombCount < bombLimit) {
-//            Bomb newBomb = new Bomb(this.x, this.y, this.power, this, gameMap);
-//            if (gameMap != null) {
-//                gameMap.addBomb(newBomb);
-//            }
-//            activeBombCount++;
-//        }
-//    }
-
-    /**
-     * Phương thức nhận sát thương sử dụng Timer để đếm thời gian bất tử đúng 1 giây
-     */
     public void takeDamage() {
         if (!isAlive || isInvulnerable) {
-            return; // Nếu đã chết hoặc đang bất tử thì bỏ qua
+            return;
         }
 
         lives--;
         if (lives <= 0) {
             die();
         } else {
-            // Kích hoạt trạng thái bất tử tạm thời và dùng Timer đếm đúng 1 giây (1000ms)
             isInvulnerable = true;
-            Timer invulnerableTimer = new Timer();
-            invulnerableTimer.schedule(new TimerTask() {
+            java.util.Timer invulnerableTimer = new java.util.Timer();
+            invulnerableTimer.schedule(new java.util.TimerTask() {
                 @Override
                 public void run() {
-                    isInvulnerable = false; // Hết 1 giây thì tắt trạng thái bất tử
+                    isInvulnerable = false;
                     invulnerableTimer.cancel();
                 }
-            }, 1000); // Đếm chính xác 1000ms = 1 giây
+            }, 1000);
         }
     }
 
@@ -73,14 +50,14 @@ public abstract class PlayerOb {
     }
 
     // ==========================================
-    // GETTERS & SETTERS
+    // GETTERS & SETTERS (Kiểu double)
     // ==========================================
 
-    public int getX() { return x; }
-    public void setX(int x) { this.x = x; }
+    public double getX() { return x; }
+    public void setX(double x) { this.x = x; }
 
-    public int getY() { return y; }
-    public void setY(int y) { this.y = y; }
+    public double getY() { return y; }
+    public void setY(double y) { this.y = y; }
 
     public double getSpeed() { return speed; }
     public void setSpeed(double speed) { this.speed = speed; }

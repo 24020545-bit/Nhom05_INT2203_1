@@ -58,10 +58,10 @@ public class GameMap {
     private char[][] createMap1_Classic() {
         String[] customDesign = {
                 "#################",
-                "#..X#XXXXX#XXX..#",
-                "#.#X#X#####X###.#",
-                "#X#XXXXXXXXXX#XX#",
-                "#X#X#X#X####X#X##",
+                "#...#XXXXX#XXX..#",
+                "#.#.#X#####X###.#",
+                "#X#.XXXXXXXXX#XX#",
+                "#X#.#X#X####X#X##",
                 "#X#X#X#XXXXXXXXX#",
                 "#X#X#X#X#######X#",
                 "#X#X#X###XXXXXXX#",
@@ -110,4 +110,14 @@ public class GameMap {
         if (x < 0 || x >= SIZE || y < 0 || y >= SIZE) return WALL_SOLID;
         return currentGrid[y][x];
     }
+
+    public boolean isWalkable(int x, int y) {
+        if (x < 0 || x >= SIZE || y < 0 || y >= SIZE) {
+            return false;
+        }
+
+        return getTile(x, y) == EMPTY;
+    }
+
+
 }

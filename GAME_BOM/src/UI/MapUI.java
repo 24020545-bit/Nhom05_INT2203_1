@@ -1,3 +1,4 @@
+package UI;
 
 import Map.GameMap;
 
