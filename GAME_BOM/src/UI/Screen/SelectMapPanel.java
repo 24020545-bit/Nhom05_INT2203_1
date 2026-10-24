@@ -1,6 +1,8 @@
-package UI;
+package UI.Screen;
 
 import Map.GameMap;
+import UI.MainFrame;
+import UI.MapPanel;
 
 import javax.swing.*;
 import java.awt.*;
@@ -29,6 +31,10 @@ public class SelectMapPanel extends JPanel {
         gridCheckBox.setForeground(Color.WHITE);
         gridCheckBox.setOpaque(false);
 
+        // Khởi tạo nút Zoom + và Zoom -
+        JButton zoomInBtn = new JButton("Zoom +");
+        JButton zoomOutBtn = new JButton("Zoom -");
+
         JButton startButton = new JButton("Bắt đầu chơi (1 Player + 3 Bots)");
         JButton backButton = new JButton("Quay lại");
 
@@ -41,6 +47,16 @@ public class SelectMapPanel extends JPanel {
                 mapPanel.setShowGrid(gridCheckBox.isSelected())
         );
 
+        // Sự kiện phóng to bản đồ
+        zoomInBtn.addActionListener(e -> {
+            mapPanel.zoomMap(true);
+        });
+
+        // Sự kiện thu nhỏ bản đồ
+        zoomOutBtn.addActionListener(e -> {
+            mapPanel.zoomMap(false);
+        });
+
         // Khi bấm bắt đầu, chỉ cần truyền mapIndex (mặc định luôn 1 Player và 3 Bot)
         startButton.addActionListener(e -> {
             int selectedMap = mapSelectorCombo.getSelectedIndex();
@@ -51,9 +67,12 @@ public class SelectMapPanel extends JPanel {
                 frame.showScreen("HOME")
         );
 
+        // Thêm các thành phần vào controlPanel
         controlPanel.add(mapLabel);
         controlPanel.add(mapSelectorCombo);
         controlPanel.add(gridCheckBox);
+        controlPanel.add(zoomInBtn);  // Thêm nút Zoom +
+        controlPanel.add(zoomOutBtn); // Thêm nút Zoom -
         controlPanel.add(startButton);
         controlPanel.add(backButton);
 

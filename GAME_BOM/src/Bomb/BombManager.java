@@ -1,22 +1,25 @@
 package Bomb;
 
+import Items.ItemManager; // Import ItemManager
 import Map.GameMap;
 import Player.Explosion;
 import Player.PlayerOb;
 
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 
 public class BombManager {
     private List<Bomb> activeBombs;
     private List<Explosion> activeExplosions;
     private GameMap gameMap;
-    private List<PlayerOb> players; // Thêm danh sách người chơi/bot vào đây
+    private List<PlayerOb> players;
+    private ItemManager itemManager; // Thêm biến ItemManager vào đây
 
-    public BombManager(GameMap gameMap, List<PlayerOb> players) {
+    // Cập nhật constructor để nhận thêm tham số itemManager
+    public BombManager(GameMap gameMap, List<PlayerOb> players, ItemManager itemManager) {
         this.gameMap = gameMap;
         this.players = players;
+        this.itemManager = itemManager;
         this.activeBombs = new ArrayList<>();
         this.activeExplosions = new ArrayList<>();
     }
@@ -35,7 +38,8 @@ public class BombManager {
 
     // Khi bom nổ, BombManager sẽ đồng thời kiểm tra sát thương cho toàn bộ players luôn
     public void triggerExplosion(int bombX, int bombY, int power) {
-        Explosion explosion = new Explosion(bombX, bombY, power, gameMap);
+        // Truyền thêm itemManager vào constructor của Explosion để tự động sinh item khi vỡ gạch
+        Explosion explosion = new Explosion(bombX, bombY, power, gameMap, itemManager);
         activeExplosions.add(explosion);
 
         // Kiểm tra xem ngọn lửa có trúng player hay bot nào không

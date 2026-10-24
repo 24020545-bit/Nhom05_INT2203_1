@@ -1,4 +1,4 @@
-package UI;
+package UI.Renderer;
 
 import Player.Explosion;
 import Map.GameMap;

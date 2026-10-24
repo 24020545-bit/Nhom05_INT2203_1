@@ -1,6 +1,9 @@
 package UI;
 
 import Map.GameMap;
+import UI.Screen.GamePanel;
+import UI.Screen.HomePanel;
+import UI.Screen.SelectMapPanel;
 
 import javax.swing.*;
 import java.awt.*;
@@ -15,7 +18,6 @@ public class MainFrame extends JFrame {
 
         setTitle("Bomberman");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setResizable(false);
 
         cardLayout = new CardLayout();
         mainPanel = new JPanel(cardLayout);

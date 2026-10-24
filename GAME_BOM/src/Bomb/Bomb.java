@@ -36,7 +36,7 @@ public class Bomb {
             public void run() {
                 explode();
             }
-        }, 3000); // 3 giây tự nổ
+        }, 2000); // 3 giây tự nổ
     }
 
     public void explode() {

@@ -1,4 +1,6 @@
-package UI;
+package UI.Screen;
+
+import UI.MainFrame;
 
 import javax.swing.*;
 import java.awt.*;

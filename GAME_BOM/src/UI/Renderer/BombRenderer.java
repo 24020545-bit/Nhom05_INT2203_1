@@ -1,4 +1,4 @@
-package UI;
+package UI.Renderer;
 
 import Bomb.Bomb;
 import Bomb.BombManager;

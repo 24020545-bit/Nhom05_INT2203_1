@@ -1,4 +1,4 @@
-package UI;
+package UI.Renderer;
 
 import Map.GameMap;
 import java.awt.*;

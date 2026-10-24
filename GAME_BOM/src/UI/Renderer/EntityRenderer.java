@@ -1,4 +1,4 @@
-package UI;
+package UI.Renderer;
 
 import Player.PlayerOb;
 import java.awt.*;

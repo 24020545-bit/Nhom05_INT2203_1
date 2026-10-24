@@ -14,12 +14,15 @@ public class HUDPanel {
 
         g2d.setFont(new Font("Segoe UI", Font.BOLD, 12));
 
-        // Tọa độ cố định ở 4 góc màn hình cho tối đa 4 người chơi/bot
+        // Tọa độ cố định ở 4 góc màn hình cho tối đa 4 người chơi/bot (tăng chiều cao box lên 70px)
+        int boxWidth = 120;
+        int boxHeight = 70;
+
         int[][] positions = {
-                {15, 15},                               // Góc trên-trái (Player 1)
-                {panelWidth - 135, 15},                 // Góc trên-phải (Bot 1)
-                {15, panelHeight - 45},                 // Góc dưới-trái (Bot 2)
-                {panelWidth - 135, panelHeight - 45}    // Góc dưới-phải (Bot 3)
+                {15, 15},                                           // Góc trên-trái (Player 1)
+                {panelWidth - boxWidth - 15, 15},                   // Góc trên-phải (Bot 1)
+                {15, panelHeight - boxHeight - 15},                 // Góc dưới-trái (Bot 2)
+                {panelWidth - boxWidth - 15, panelHeight - boxHeight - 15} // Góc dưới-phải (Bot 3)
         };
 
         for (int i = 0; i < players.size() && i < positions.length; i++) {
@@ -27,9 +30,9 @@ public class HUDPanel {
             int boxX = positions[i][0];
             int boxY = positions[i][1];
 
-            // Thiết kế khung nền đen mờ cho từng player
+            // Thiết kế khung nền đen mờ cho từng player (đủ chỗ chứa nhiều dòng)
             g2d.setColor(new Color(0, 0, 0, 160));
-            g2d.fillRect(boxX, boxY, 120, 30);
+            g2d.fillRect(boxX, boxY, boxWidth, boxHeight);
 
             // Viền màu phân biệt (Player thật màu Vàng, Bot màu Xanh dương nhạt)
             if (p instanceof Bot) {
@@ -37,15 +40,28 @@ public class HUDPanel {
             } else {
                 g2d.setColor(Color.YELLOW);
             }
-            g2d.drawRect(boxX, boxY, 120, 30);
+            g2d.drawRect(boxX, boxY, boxWidth, boxHeight);
 
-            // Sửa lại tên hiển thị chuẩn xác (tránh lỗi cộng chuỗi số)
+            // Chuẩn bị nội dung hiển thị
             String name = (p instanceof Player) ? "Player 1" : "Bot " + i;
-            String status = "HP: " + p.getLives() + " | Bom: " + (p.getBombLimit() - p.getActiveBombCount());
+            String status = "HP: " + p.getLives() + "\nBom: " +
+                    (p.getBombLimit() - p.getActiveBombCount()) + "/" + p.getBombLimit() +
+                    "\nSpeed: " + Math.round(p.getSpeed()*100)/100.0;
 
             g2d.setColor(Color.WHITE);
-            g2d.drawString(name, boxX + 8, boxY + 12);
-            g2d.drawString(status, boxX + 8, boxY + 24);
+
+            // Vẽ tên người chơi ở dòng đầu tiên
+            int currentY = boxY + 16;
+            g2d.drawString(name, boxX + 8, currentY);
+
+            // Tách chuỗi theo dấu \n và vẽ từng dòng thông tin xuống phía dưới
+            String[] lines = status.split("\n");
+            int lineHeight = 14; // Khoảng cách giữa các dòng
+
+            for (String line : lines) {
+                currentY += lineHeight;
+                g2d.drawString(line, boxX + 8, currentY);
+            }
         }
     }
 }

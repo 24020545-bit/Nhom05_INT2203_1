@@ -8,7 +8,7 @@ public class SpeedUp extends Items {
     @Override
     public void applyEffect(PlayerOb target) {
         if (target != null && target.isAlive()) {
-            target.setSpeed(target.getSpeed() + 0.5);
+            target.setSpeed(target.getSpeed() + 0.02);
             this.isCollected = true;
         }
     }
