@@ -1,4 +1,4 @@
-package Map;
+package map;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -14,12 +14,14 @@ public class GameMap {
     public static final char WALL_BRICK = 'X'; // Tường gạch (phá được bằng bom)
 
     private List<char[][]> mapList;
+    private List<String[]> rawMapTemplates; // [MỚI] Lưu lại bản thiết kế gốc để reset map
     private int currentMapIndex;
 
     public GameMap() {
         mapList = new ArrayList<>();
+        rawMapTemplates = new ArrayList<>();
 
-        // Đọc danh sách map từ file txt (ví dụ: "maps.txt")
+        // Đọc danh sách map từ file txt (ví dụ: "map.txt")
         loadMapsFromFile("map.txt");
 
         // Nếu file trống hoặc lỗi, tạo sẵn 1 map mặc định để tránh crash game
@@ -31,6 +33,7 @@ public class GameMap {
                     "#.#...#.#",
                     "#########"
             };
+            rawMapTemplates.add(defaultMap);
             mapList.add(parseStringToMap(defaultMap));
         }
 
@@ -53,7 +56,9 @@ public class GameMap {
                 // Nếu gặp dòng phân cách hoặc dòng trống kết thúc 1 map
                 if (line.equals("---")) {
                     if (!currentMapLines.isEmpty()) {
-                        mapList.add(parseStringToMap(currentMapLines.toArray(new String[0])));
+                        String[] template = currentMapLines.toArray(new String[0]);
+                        rawMapTemplates.add(template);
+                        mapList.add(parseStringToMap(template));
                         currentMapLines.clear();
                     }
                 } else if (!line.isEmpty()) {
@@ -63,11 +68,23 @@ public class GameMap {
 
             // Thêm map cuối cùng nếu file không kết thúc bằng "---"
             if (!currentMapLines.isEmpty()) {
-                mapList.add(parseStringToMap(currentMapLines.toArray(new String[0])));
+                String[] template = currentMapLines.toArray(new String[0]);
+                rawMapTemplates.add(template);
+                mapList.add(parseStringToMap(template));
             }
 
         } catch (IOException e) {
             System.err.println("Không thể đọc file bản đồ: " + filePath + " (" + e.getMessage() + ")");
+        }
+    }
+
+    /**
+     * [MỚI THÊM] Khôi phục lại toàn bộ bản đồ về trạng thái ban đầu (hồi phục tường gạch)
+     */
+    public void resetMap() {
+        mapList.clear();
+        for (String[] template : rawMapTemplates) {
+            mapList.add(parseStringToMap(template));
         }
     }
 

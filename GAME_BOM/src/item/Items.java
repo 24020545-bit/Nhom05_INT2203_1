@@ -1,6 +1,7 @@
-package Items;
+package item;
 
-import Player.PlayerOb;
+import entity.PlayerOb;
+import java.awt.*;
 
 public abstract class Items {
     protected int x;
@@ -14,6 +15,9 @@ public abstract class Items {
     }
 
     public abstract void applyEffect(PlayerOb target);
+
+    // Thêm hàm draw trừu tượng để các item con tự định nghĩa cách vẽ
+    public abstract void draw(Graphics2D g2d, int tileSize);
 
     public int getX() { return x; }
     public int getY() { return y; }

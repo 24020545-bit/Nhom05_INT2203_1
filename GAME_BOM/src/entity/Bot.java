@@ -1,7 +1,8 @@
-package Player;
+package entity;
 
-import Bomb.BombManager;
-import Map.GameMap;
+import utils.Direction;
+import manager.BombManager;
+import map.GameMap;
 
 import java.util.Random;
 
@@ -16,13 +17,13 @@ public class Bot extends PlayerOb {
 
     @Override
     public void move(Direction direction) {
-        // Giữ nguyên theo ý bạn
+        // Giữ nguyên
     }
 
     /**
-     * Hàm di chuyển mượt mà sub-stepping riêng của Bot
+     * Hàm di chuyển mượt mà của Bot có tích hợp kiểm tra bom để Bot không tự bước vào bom của mình
      */
-    public void move(Direction direction, GameMap gameMap) {
+    public void move(Direction direction, GameMap gameMap, BombManager bombManager) {
         if (!isAlive() || direction == null || gameMap == null) return;
 
         double remainingMove = this.speed;
@@ -44,12 +45,29 @@ public class Bot extends PlayerOb {
             double checkX = nextX + direction.getDx() * margin;
             double checkY = nextY + direction.getDy() * margin;
 
-            if (gameMap.isWalkable((int) Math.round(checkX), (int) Math.round(checkY))) {
-                x = nextX;
-                y = nextY;
-            } else {
+            int targetTileX = (int) Math.round(checkX);
+            int targetTileY = (int) Math.round(checkY);
+
+            // 1. Kiểm tra tường
+            if (!gameMap.isWalkable(targetTileX, targetTileY)) {
                 break;
             }
+
+            // 2. Kiểm tra bom
+            if (bombManager != null) {
+                var hitBomb = bombManager.getBombAt(targetTileX, targetTileY);
+                if (hitBomb != null) {
+                    int currentTileX = (int) Math.round(this.x);
+                    int currentTileY = (int) Math.round(this.y);
+
+                    if (currentTileX != targetTileX || currentTileY != targetTileY) {
+                        break; // Bot bị chặn bởi bom
+                    }
+                }
+            }
+
+            x = nextX;
+            y = nextY;
 
             remainingMove -= currentStep;
         }
@@ -64,15 +82,13 @@ public class Bot extends PlayerOb {
         int currentTileX = (int) Math.round(getX());
         int currentTileY = (int) Math.round(getY());
 
-        // 1. Né bom khẩn cấp nếu đang đứng ở vùng nguy hiểm (Ưu tiên cao nhất)
+        // 1. Né bom khẩn cấp nếu đang đứng ở vùng nguy hiểm
         if (isDangerZone(gameMap, bombManager, currentTileX, currentTileY)) {
             escapeDanger(gameMap, bombManager);
             return;
         }
 
-        // 2. ĐẶT BOM AN TOÀN:
-        // - CHỈ đặt khi KHÔNG có quả bom nào đang hoạt động (getActiveBombCount() == 0) -> Chống spam tuyệt đối!
-        // - Xác suất thấp (5%) để bot đi lại quan sát trước khi thả bom.
+        // 2. ĐẶT BOM AN TOÀN
         if (getActiveBombCount() == 0 && random.nextInt(100) < 5) {
             if (bombManager != null) {
                 Direction escapeCheck = findStrictEscapeDirection(gameMap, bombManager);
@@ -83,7 +99,7 @@ public class Bot extends PlayerOb {
 
                         // Lập tức né ngay hướng an toàn để chạy ra xa
                         currentDirection = escapeCheck;
-                        move(currentDirection, gameMap);
+                        move(currentDirection, gameMap, bombManager);
                         return;
                     }
                 }
@@ -92,27 +108,34 @@ public class Bot extends PlayerOb {
 
         // 3. Đổi hướng linh hoạt
         changeDirCounter++;
-        if (changeDirCounter > 20 || currentDirection == null || !canContinueMoving(gameMap)) {
+        if (changeDirCounter > 20 || currentDirection == null || !canContinueMoving(gameMap, bombManager)) {
             currentDirection = chooseBestDirection(gameMap, bombManager);
             changeDirCounter = 0;
         }
 
         // 4. Di chuyển theo hướng hiện tại
         if (currentDirection != null) {
-            move(currentDirection, gameMap);
+            move(currentDirection, gameMap, bombManager);
         }
     }
 
-    private boolean canContinueMoving(GameMap gameMap) {
+    private boolean canContinueMoving(GameMap gameMap, BombManager bombManager) {
         if (currentDirection == null) return false;
         double nextX = x + currentDirection.getDx() * 0.4;
         double nextY = y + currentDirection.getDy() * 0.4;
-        return gameMap.isWalkable((int) Math.round(nextX), (int) Math.round(nextY));
+        int tX = (int) Math.round(nextX);
+        int tY = (int) Math.round(nextY);
+
+        if (!gameMap.isWalkable(tX, tY)) return false;
+        if (bombManager != null && bombManager.getBombAt(tX, tY) != null) return false;
+
+        return true;
     }
 
     private Direction chooseBestDirection(GameMap gameMap, BombManager bombManager) {
         Direction[] directions = {Direction.UP, Direction.DOWN, Direction.LEFT, Direction.RIGHT};
 
+        // [ĐÃ SỬA LỖI CÚ PHÁP] Thuật toán trộn mảng ngẫu nhiên (Fisher-Yates)
         for (int i = directions.length - 1; i > 0; i--) {
             int index = random.nextInt(i + 1);
             Direction temp = directions[index];
@@ -126,7 +149,9 @@ public class Bot extends PlayerOb {
         for (Direction d : directions) {
             int checkX = currentTileX + d.getDx();
             int checkY = currentTileY + d.getDy();
-            if (gameMap.isWalkable(checkX, checkY) && !isDangerZone(gameMap, bombManager, checkX, checkY)) {
+            if (gameMap.isWalkable(checkX, checkY) &&
+                    (bombManager == null || bombManager.getBombAt(checkX, checkY) == null) &&
+                    !isDangerZone(gameMap, bombManager, checkX, checkY)) {
                 return d;
             }
         }
@@ -134,7 +159,8 @@ public class Bot extends PlayerOb {
         for (Direction d : directions) {
             int checkX = currentTileX + d.getDx();
             int checkY = currentTileY + d.getDy();
-            if (gameMap.isWalkable(checkX, checkY)) {
+            if (gameMap.isWalkable(checkX, checkY) &&
+                    (bombManager == null || bombManager.getBombAt(checkX, checkY) == null)) {
                 return d;
             }
         }
@@ -190,7 +216,9 @@ public class Bot extends PlayerOb {
             int escapeX = currentTileX + d.getDx();
             int escapeY = currentTileY + d.getDy();
 
-            if (gameMap.isWalkable(escapeX, escapeY) && !isDangerZone(gameMap, bombManager, escapeX, escapeY)) {
+            if (gameMap.isWalkable(escapeX, escapeY) &&
+                    (bombManager == null || bombManager.getBombAt(escapeX, escapeY) == null) &&
+                    !isDangerZone(gameMap, bombManager, escapeX, escapeY)) {
                 int distanceToNearestBomb = getMinDistanceToBombs(escapeX, escapeY, bombManager);
 
                 if (distanceToNearestBomb > maxDistance) {
@@ -202,7 +230,7 @@ public class Bot extends PlayerOb {
 
         if (bestDirection != null) {
             currentDirection = bestDirection;
-            move(currentDirection, gameMap);
+            move(currentDirection, gameMap, bombManager);
         } else {
             for (Direction d : directions) {
                 int deepX = currentTileX + (d.getDx() * 2);
@@ -210,19 +238,19 @@ public class Bot extends PlayerOb {
                 int midX = currentTileX + d.getDx();
                 int midY = currentTileY + d.getDy();
 
-                if (gameMap.isWalkable(midX, midY) && gameMap.isWalkable(deepX, deepY)
-                        && !isDangerZone(gameMap, bombManager, deepX, deepY)) {
+                if (gameMap.isWalkable(midX, midY) &&
+                        (bombManager == null || bombManager.getBombAt(midX, midY) == null) &&
+                        gameMap.isWalkable(deepX, deepY) &&
+                        (bombManager == null || bombManager.getBombAt(deepX, deepY) == null) &&
+                        !isDangerZone(gameMap, bombManager, deepX, deepY)) {
                     currentDirection = d;
-                    move(currentDirection, gameMap);
+                    move(currentDirection, gameMap, bombManager);
                     return;
                 }
             }
         }
     }
 
-    /**
-     * Hàm kiểm tra cực kỳ nghiêm ngặt: Chỉ trả về hướng né khi ô đó THỰC SỰ an toàn và không bị kẹt
-     */
     private Direction findStrictEscapeDirection(GameMap gameMap, BombManager bombManager) {
         Direction[] directions = {Direction.UP, Direction.DOWN, Direction.LEFT, Direction.RIGHT};
         int currentTileX = (int) Math.round(getX());
@@ -235,8 +263,9 @@ public class Bot extends PlayerOb {
             int targetX = currentTileX + d.getDx();
             int targetY = currentTileY + d.getDy();
 
-            // Phải đi được và tuyệt đối KHÔNG nằm trong vùng nguy hiểm
-            if (gameMap.isWalkable(targetX, targetY) && !isDangerZone(gameMap, bombManager, targetX, targetY)) {
+            if (gameMap.isWalkable(targetX, targetY) &&
+                    (bombManager == null || bombManager.getBombAt(targetX, targetY) == null) &&
+                    !isDangerZone(gameMap, bombManager, targetX, targetY)) {
                 int dist = getMinDistanceToBombs(targetX, targetY, bombManager);
                 if (dist > maxDist) {
                     maxDist = dist;
@@ -244,8 +273,6 @@ public class Bot extends PlayerOb {
                 }
             }
         }
-
-        // KHÔNG cho phép chọn bừa hướng xấu nữa. Nếu không tìm được hướng thực sự an toàn -> trả về null để hủy đặt bom.
         return bestDir;
     }
 

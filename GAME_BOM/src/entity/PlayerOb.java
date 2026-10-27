@@ -1,8 +1,11 @@
-package Player;
+package entity;
+
+import utils.Direction;
+import java.awt.*;
 
 public abstract class PlayerOb {
-    protected double x; // Chuyển sang double
-    protected double y; // Chuyển sang double
+    protected double x;
+    protected double y;
     protected double speed;
     protected int lives;
     protected int bombLimit;
@@ -23,6 +26,32 @@ public abstract class PlayerOb {
     }
 
     public abstract void move(Direction direction);
+
+    // ==========================================
+    // HÀM VẼ CHUNG CHO NHÂN VẬT / BOT (Đã sửa lỗi nhân`)
+    // ==========================================
+    public void draw(Graphics2D g2d, int tileSize, Color bodyColor) {
+        if (!isAlive) return;
+
+        // 1. Tính tọa độ pixel thực tế (Đã sửa lỗi cú pháp nhân tileSize)
+        double pixelX = x * tileSize;
+        double pixelY = y * tileSize;
+
+        // 2. Kích thước nhân vật (nhỏ hơn ô tile một chút)
+        int charSize = tileSize - 8;
+
+        // 3. Căn giữa ô lưới
+        int renderX = (int) Math.round(pixelX + (double)(tileSize - charSize) / 2.0);
+        int renderY = (int) Math.round(pixelY + (double)(tileSize - charSize) / 2.0);
+
+        // 4. Vẽ thân đối tượng
+        g2d.setColor(bodyColor);
+        g2d.fillOval(renderX, renderY, charSize, charSize);
+
+        // 5. Vẽ viền trắng xung quanh
+        g2d.setColor(Color.WHITE);
+        g2d.drawOval(renderX, renderY, charSize, charSize);
+    }
 
     public void takeDamage() {
         if (!isAlive || isInvulnerable) {
@@ -50,9 +79,8 @@ public abstract class PlayerOb {
     }
 
     // ==========================================
-    // GETTERS & SETTERS (Kiểu double)
+    // GETTERS & SETTERS
     // ==========================================
-
     public double getX() { return x; }
     public void setX(double x) { this.x = x; }
 

@@ -1,4 +1,4 @@
-package Util;
+package utils;
 
 public class Constants {
     public static int TILE_SIZE = 22; // Kích thước mặc định

@@ -1,8 +1,8 @@
 package UI;
 
-import Player.Bot;
-import Player.Player;
-import Player.PlayerOb;
+import entity.Bot;
+import entity.Player;
+import entity.PlayerOb;
 
 import java.awt.*;
 import java.util.List;

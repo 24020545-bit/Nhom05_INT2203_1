@@ -1,9 +1,10 @@
-package Bomb;
+package bomb;
 
-import Player.Explosion;
-import Player.PlayerOb;
-import Map.GameMap;
+import map.GameMap;
+import entity.PlayerOb;
+import manager.BombManager;
 
+import java.awt.*;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -36,7 +37,18 @@ public class Bomb {
             public void run() {
                 explode();
             }
-        }, 2000); // 3 giây tự nổ
+        }, 2000); // 2 giây tự nổ
+    }
+
+    // Hàm kích hoạt nổ ngay lập tức (dùng cho bom dây chuyền)
+    public void forceExplode() {
+        synchronized (this) {
+            if (isExploded) return;
+            if (timer != null) {
+                timer.cancel();
+            }
+        }
+        explode();
     }
 
     public void explode() {
@@ -57,6 +69,24 @@ public class Bomb {
                 owner.setActiveBombCount(currentActive - 1);
             }
         }
+    }
+
+    // ==========================================
+    // HÀM VẼ QUẢ BOM LÊN MÀN HÌNH
+    // ==========================================
+    public void draw(Graphics2D g2d, int tileSize) {
+        if (isExploded) return;
+
+        int drawX = x * tileSize;
+        int drawY = y * tileSize;
+
+        // Thân quả bom (Hình tròn xám đậm)
+        g2d.setColor(new Color(30, 30, 30));
+        g2d.fillOval(drawX + 4, drawY + 4, tileSize - 8, tileSize - 8);
+
+        // Ngòi nổ (Chấm đỏ nhỏ ở giữa)
+        g2d.setColor(Color.RED);
+        g2d.fillOval(drawX + tileSize / 2 - 3, drawY + 3, 6, 6);
     }
 
     public int getX() { return x; }

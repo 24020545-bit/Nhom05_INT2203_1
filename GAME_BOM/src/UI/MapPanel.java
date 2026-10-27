@@ -1,16 +1,14 @@
 package UI;
 
-import Bomb.BombManager;
-import Items.ItemManager; // Import ItemManager
-import Map.GameMap;
-import Player.PlayerOb;
-import Player.Bot;
-import UI.Renderer.BombRenderer;
-import UI.Renderer.EntityRenderer;
-import UI.Renderer.ExplosionRenderer;
-import UI.Renderer.ItemRenderer; // Import ItemRenderer để vẽ item
-import UI.Renderer.MapRenderer;
-import Util.Constants;
+import manager.BombManager;
+import manager.ItemManager;
+import map.GameMap;
+import entity.PlayerOb;
+import entity.Bot;
+import bomb.Bomb;
+import bomb.Explosion;
+import item.Items;
+import utils.Constants;
 
 import javax.swing.*;
 import java.awt.*;
@@ -20,7 +18,7 @@ public class MapPanel extends JPanel {
     private final GameMap gameMap;
     private final List<PlayerOb> players;
     private final BombManager bombManager;
-    private final ItemManager itemManager; // Khai báo ItemManager
+    private final ItemManager itemManager;
     private boolean showGrid = true;
 
     // Các constructor hỗ trợ đa dạng tham số
@@ -68,30 +66,38 @@ public class MapPanel extends JPanel {
         // 2. Dịch chuyển hệ tọa độ g2d
         g2d.translate(offsetX, offsetY);
 
-        // - Vẽ bản đồ (Lớp dưới cùng)
+        // - Vẽ bản đồ (Lớp dưới cùng) - Dùng MapRenderer vì Map là lưới dữ liệu tĩnh
         MapRenderer.draw(g2d, gameMap, Constants.TILE_SIZE, showGrid);
 
-        // - Vẽ Items (Nằm trên bản đồ, nằm dưới lửa và bom)
-        if (itemManager != null) {
-            ItemRenderer.draw(g2d, itemManager.getItemsList(), Constants.TILE_SIZE);
+        // - Vẽ Items (Gọi trực tiếp hàm draw của từng Item)
+        if (itemManager != null && itemManager.getItemsList() != null) {
+            for (Items item : itemManager.getItemsList()) {
+                if (!item.isCollected()) {
+                    item.draw(g2d, Constants.TILE_SIZE);
+                }
+            }
         }
 
-        // - Vẽ hiệu ứng lửa vụ nổ
-        if (bombManager != null) {
-            ExplosionRenderer.draw(g2d, bombManager.getActiveExplosions(), gameMap, Constants.TILE_SIZE);
+        // - Vẽ hiệu ứng lửa vụ nổ (Gọi trực tiếp hàm draw của từng Explosion)
+        if (bombManager != null && bombManager.getActiveExplosions() != null) {
+            for (Explosion exp : bombManager.getActiveExplosions()) {
+                exp.draw(g2d, Constants.TILE_SIZE);
+            }
         }
 
-        // - Vẽ Bom (Lớp trên lửa)
-        if (bombManager != null) {
-            BombRenderer.draw(g2d, bombManager, Constants.TILE_SIZE);
+        // - Vẽ Bom (Gọi trực tiếp hàm draw của từng Bomb)
+        if (bombManager != null && bombManager.getActiveBombs() != null) {
+            for (Bomb bomb : bombManager.getActiveBombs()) {
+                bomb.draw(g2d, Constants.TILE_SIZE);
+            }
         }
 
-        // - Vẽ tất cả Người chơi và Bot (Lớp trên cùng)
+        // - Vẽ tất cả Người chơi và Bot (Gọi trực tiếp hàm draw của PlayerOb)
         if (players != null) {
             for (PlayerOb p : players) {
                 if (p.isAlive()) {
                     Color color = (p instanceof Bot) ? Color.BLUE : Color.RED;
-                    EntityRenderer.draw(g2d, p, Constants.TILE_SIZE, color);
+                    p.draw(g2d, Constants.TILE_SIZE, color);
                 }
             }
         }
