@@ -1,4 +1,4 @@
-package UI;
+package UI.Screen;
 
 import entity.Bot;
 import entity.Player;

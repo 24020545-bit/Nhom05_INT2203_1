@@ -1,10 +1,11 @@
 package UI;
 
+import UI.Screen.HUDPanel;
+import entity.Bot;
 import manager.BombManager;
 import manager.ItemManager;
 import map.GameMap;
 import entity.PlayerOb;
-import entity.Bot;
 import bomb.Bomb;
 import bomb.Explosion;
 import item.Items;
@@ -21,26 +22,15 @@ public class MapPanel extends JPanel {
     private final ItemManager itemManager;
     private boolean showGrid = true;
 
-    // Các constructor hỗ trợ đa dạng tham số
-    public MapPanel(GameMap gameMap) {
-        this(gameMap, null, null, null);
-    }
-
-    public MapPanel(GameMap gameMap, List<PlayerOb> players, BombManager bombManager) {
-        this(gameMap, players, bombManager, null);
-    }
-
     public MapPanel(GameMap gameMap, List<PlayerOb> players, BombManager bombManager, ItemManager itemManager) {
         this.gameMap = gameMap;
         this.players = players;
         this.bombManager = bombManager;
         this.itemManager = itemManager;
 
-        // Sử dụng Constants.TILE_SIZE để tính kích thước khung hình
         int widthPx = gameMap.getWidth() * Constants.TILE_SIZE;
         int heightPx = gameMap.getHeight() * Constants.TILE_SIZE;
         setPreferredSize(new Dimension(widthPx, heightPx));
-
         setBackground(new Color(34, 139, 34));
     }
 
@@ -55,57 +45,66 @@ public class MapPanel extends JPanel {
 
         Graphics2D g2d = (Graphics2D) g;
         g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
 
-        // 1. Tính toán khoảng cách canh giữa (Offset) dựa trên Constants.TILE_SIZE
-        int totalMapWidthPx = gameMap.getWidth() * Constants.TILE_SIZE;
-        int totalMapHeightPx = gameMap.getHeight() * Constants.TILE_SIZE;
+        // 1. Kích thước gốc của bản đồ
+        int baseMapWidth = gameMap.getWidth() * Constants.TILE_SIZE;
+        int baseMapHeight = gameMap.getHeight() * Constants.TILE_SIZE;
 
-        int offsetX = Math.max(0, (getWidth() - totalMapWidthPx) / 2);
-        int offsetY = Math.max(0, (getHeight() - totalMapHeightPx) / 2);
+        // 2. Tính tỷ lệ co giãn (Scale) khi phóng to cửa sổ
+        double scaleX = (double) getWidth() / baseMapWidth;
+        double scaleY = (double) getHeight() / baseMapHeight;
+        double scale = Math.min(scaleX, scaleY);
 
-        // 2. Dịch chuyển hệ tọa độ g2d
-        g2d.translate(offsetX, offsetY);
+        Graphics2D gMap = (Graphics2D) g2d.create();
 
-        // - Vẽ bản đồ (Lớp dưới cùng) - Dùng MapRenderer vì Map là lưới dữ liệu tĩnh
-        MapRenderer.draw(g2d, gameMap, Constants.TILE_SIZE, showGrid);
+        int scaledWidth = (int) (baseMapWidth * scale);
+        int scaledHeight = (int) (baseMapHeight * scale);
+        int offsetX = (getWidth() - scaledWidth) / 2;
+        int offsetY = (getHeight() - scaledHeight) / 2;
 
-        // - Vẽ Items (Gọi trực tiếp hàm draw của từng Item)
+        gMap.translate(offsetX, offsetY);
+        gMap.scale(scale, scale);
+
+        // - Vẽ bản đồ
+        MapRenderer.draw(gMap, gameMap, Constants.TILE_SIZE, showGrid);
+
+        // - Vẽ Items
         if (itemManager != null && itemManager.getItemsList() != null) {
             for (Items item : itemManager.getItemsList()) {
                 if (!item.isCollected()) {
-                    item.draw(g2d, Constants.TILE_SIZE);
+                    item.draw(gMap, Constants.TILE_SIZE);
                 }
             }
         }
 
-        // - Vẽ hiệu ứng lửa vụ nổ (Gọi trực tiếp hàm draw của từng Explosion)
+        // - Vẽ Vụ nổ
         if (bombManager != null && bombManager.getActiveExplosions() != null) {
             for (Explosion exp : bombManager.getActiveExplosions()) {
-                exp.draw(g2d, Constants.TILE_SIZE);
+                exp.draw(gMap, Constants.TILE_SIZE);
             }
         }
 
-        // - Vẽ Bom (Gọi trực tiếp hàm draw của từng Bomb)
+        // - Vẽ Bom
         if (bombManager != null && bombManager.getActiveBombs() != null) {
             for (Bomb bomb : bombManager.getActiveBombs()) {
-                bomb.draw(g2d, Constants.TILE_SIZE);
+                bomb.draw(gMap, Constants.TILE_SIZE);
             }
         }
 
-        // - Vẽ tất cả Người chơi và Bot (Gọi trực tiếp hàm draw của PlayerOb)
+        // - Vẽ Người chơi và Bot
         if (players != null) {
             for (PlayerOb p : players) {
                 if (p.isAlive()) {
                     Color color = (p instanceof Bot) ? Color.BLUE : Color.RED;
-                    p.draw(g2d, Constants.TILE_SIZE, color);
+                    p.draw(gMap, Constants.TILE_SIZE, color);
                 }
             }
         }
 
-        // Trả lại hệ tọa độ ban đầu để vẽ HUD cố định
-        g2d.translate(-offsetX, -offsetY);
+        gMap.dispose();
 
-        // 3. Vẽ khung HUD phân bố ở 4 góc màn hình
+        // 3. Vẽ khung HUD thông tin
         HUDPanel.draw(g2d, players, getWidth(), getHeight());
     }
 
@@ -116,12 +115,9 @@ public class MapPanel extends JPanel {
             Constants.zoomOut();
         }
 
-        // Tính lại kích thước mới cho MapPanel dựa trên TILE_SIZE mới
         int widthPx = gameMap.getWidth() * Constants.TILE_SIZE;
         int heightPx = gameMap.getHeight() * Constants.TILE_SIZE;
         setPreferredSize(new Dimension(widthPx, heightPx));
-
-        // Cập nhật lại giao diện Swing
         revalidate();
         repaint();
     }
