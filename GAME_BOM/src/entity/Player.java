@@ -4,7 +4,7 @@ import map.GameMap;
 import manager.BombManager;
 import utils.Direction;
 
-public class Player extends PlayerOb {
+public class Player extends Mod {
     private String name;
 
     public Player(double x, double y, double speed, int lives,

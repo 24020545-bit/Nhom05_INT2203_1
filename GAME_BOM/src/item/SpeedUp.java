@@ -1,6 +1,6 @@
 package item;
 
-import entity.PlayerOb;
+import entity.Mod;
 
 import java.awt.*;
 
@@ -8,7 +8,7 @@ public class SpeedUp extends Items {
     public SpeedUp(int x, int y) { super(x, y); }
 
     @Override
-    public void applyEffect(PlayerOb target) {
+    public void applyEffect(Mod target) {
         if (target != null && target.isAlive()) {
             target.setSpeed(target.getSpeed() + 0.01);
             this.isCollected = true;

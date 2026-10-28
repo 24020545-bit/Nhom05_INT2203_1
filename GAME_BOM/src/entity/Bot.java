@@ -6,7 +6,7 @@ import map.GameMap;
 
 import java.util.Random;
 
-public class Bot extends PlayerOb {
+public class Bot extends Mod {
     private final Random random = new Random();
     private Direction currentDirection = Direction.DOWN;
     private int changeDirCounter = 0;

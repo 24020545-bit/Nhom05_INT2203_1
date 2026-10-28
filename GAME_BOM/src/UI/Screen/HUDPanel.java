@@ -2,14 +2,14 @@ package UI.Screen;
 
 import entity.Bot;
 import entity.Player;
-import entity.PlayerOb;
+import entity.Mod;
 
 import java.awt.*;
 import java.util.List;
 
 public class HUDPanel {
 
-    public static void draw(Graphics2D g2d, List<PlayerOb> players, int panelWidth, int panelHeight) {
+    public static void draw(Graphics2D g2d, List<Mod> players, int panelWidth, int panelHeight) {
         if (players == null || players.isEmpty()) return;
 
         g2d.setFont(new Font("Segoe UI", Font.BOLD, 12));
@@ -26,7 +26,7 @@ public class HUDPanel {
         };
 
         for (int i = 0; i < players.size() && i < positions.length; i++) {
-            PlayerOb p = players.get(i);
+            Mod p = players.get(i);
             int boxX = positions[i][0];
             int boxY = positions[i][1];
 

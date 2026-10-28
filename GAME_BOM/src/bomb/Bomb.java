@@ -1,7 +1,7 @@
 package bomb;
 
 import map.GameMap;
-import entity.PlayerOb;
+import entity.Mod;
 import manager.BombManager;
 
 import java.awt.*;
@@ -12,13 +12,13 @@ public class Bomb {
     private int x;
     private int y;
     private int power;
-    private PlayerOb owner;
+    private Mod owner;
     private GameMap gameMap;
     private BombManager bombManager; // Tham chiếu đến BombManager để báo cáo vụ nổ
     private boolean isExploded;
     private Timer timer;
 
-    public Bomb(int x, int y, int power, PlayerOb owner, GameMap gameMap, BombManager bombManager) {
+    public Bomb(int x, int y, int power, Mod owner, GameMap gameMap, BombManager bombManager) {
         this.x = x;
         this.y = y;
         this.power = power;
@@ -92,6 +92,6 @@ public class Bomb {
     public int getX() { return x; }
     public int getY() { return y; }
     public int getPower() { return power; }
-    public PlayerOb getOwner() { return owner; }
+    public Mod getOwner() { return owner; }
     public boolean isExploded() { return isExploded; }
 }

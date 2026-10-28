@@ -1,6 +1,6 @@
 package item;
 
-import entity.PlayerOb;
+import entity.Mod;
 import java.awt.*;
 
 public abstract class Items {
@@ -14,7 +14,7 @@ public abstract class Items {
         this.isCollected = false;
     }
 
-    public abstract void applyEffect(PlayerOb target);
+    public abstract void applyEffect(Mod target);
 
     // Thêm hàm draw trừu tượng để các item con tự định nghĩa cách vẽ
     public abstract void draw(Graphics2D g2d, int tileSize);

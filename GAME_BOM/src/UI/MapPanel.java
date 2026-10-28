@@ -5,7 +5,7 @@ import entity.Bot;
 import manager.BombManager;
 import manager.ItemManager;
 import map.GameMap;
-import entity.PlayerOb;
+import entity.Mod;
 import bomb.Bomb;
 import bomb.Explosion;
 import item.Items;
@@ -17,12 +17,12 @@ import java.util.List;
 
 public class MapPanel extends JPanel {
     private final GameMap gameMap;
-    private final List<PlayerOb> players;
+    private final List<Mod> players;
     private final BombManager bombManager;
     private final ItemManager itemManager;
     private boolean showGrid = true;
 
-    public MapPanel(GameMap gameMap, List<PlayerOb> players, BombManager bombManager, ItemManager itemManager) {
+    public MapPanel(GameMap gameMap, List<Mod> players, BombManager bombManager, ItemManager itemManager) {
         this.gameMap = gameMap;
         this.players = players;
         this.bombManager = bombManager;
@@ -94,7 +94,7 @@ public class MapPanel extends JPanel {
 
         // - Vẽ Người chơi và Bot
         if (players != null) {
-            for (PlayerOb p : players) {
+            for (Mod p : players) {
                 if (p.isAlive()) {
                     Color color = (p instanceof Bot) ? Color.BLUE : Color.RED;
                     p.draw(gMap, Constants.TILE_SIZE, color);

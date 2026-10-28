@@ -3,7 +3,7 @@ package manager;
 import UI.MapPanel;
 import entity.Bot;
 import entity.Player;
-import entity.PlayerOb;
+import entity.Mod;
 import map.GameMap;
 
 import javax.swing.*;
@@ -17,7 +17,7 @@ public class GameManager {
     private ItemManager itemManager;
     private BombManager bombManager;
     private PlayerController playerController;
-    private List<PlayerOb> players;
+    private List<Mod> players;
 
     private Timer gameLoopTimer;
     private MapPanel mapPanel;
@@ -83,7 +83,7 @@ public class GameManager {
                 updatePlayerMovement(playerController, p1, p2);
 
                 // 2. Cập nhật AI di chuyển, né bom và đặt bom cho Bot
-                for (PlayerOb p : players) {
+                for (Mod p : players) {
                     if (p instanceof Bot && p.isAlive()) {
                         ((Bot) p).update(gameMap, bombManager);
                     }

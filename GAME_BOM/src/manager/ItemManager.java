@@ -1,7 +1,7 @@
 package manager;
 
 import item.*;
-import entity.PlayerOb;
+import entity.Mod;
 
 import java.util.List;
 import java.util.Random;
@@ -48,10 +48,10 @@ public class ItemManager {
     }
 
     // 2. Kiểm tra va chạm: Nếu người chơi đi vào ô chứa item thì "ăn" item đó
-    public void checkPlayerCollision(List<PlayerOb> players) {
+    public void checkPlayerCollision(List<Mod> players) {
         if (players == null) return;
 
-        for (PlayerOb player : players) {
+        for (Mod player : players) {
             if (!player.isAlive()) continue;
 
             int playerTileX = (int) Math.round(player.getX());

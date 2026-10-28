@@ -3,7 +3,7 @@ package manager;
 import map.GameMap;
 import bomb.Bomb;
 import bomb.Explosion;
-import entity.PlayerOb;
+import entity.Mod;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -12,10 +12,10 @@ public class BombManager {
     private List<Bomb> activeBombs;
     private List<Explosion> activeExplosions;
     private GameMap gameMap;
-    private List<PlayerOb> players;
+    private List<Mod> players;
     private ItemManager itemManager;
 
-    public BombManager(GameMap gameMap, List<PlayerOb> players, ItemManager itemManager) {
+    public BombManager(GameMap gameMap, List<Mod> players, ItemManager itemManager) {
         this.gameMap = gameMap;
         this.players = players;
         this.itemManager = itemManager;
@@ -23,7 +23,7 @@ public class BombManager {
         this.activeExplosions = new ArrayList<>();
     }
 
-    public boolean placeBomb(int x, int y, int power, PlayerOb owner) {
+    public boolean placeBomb(int x, int y, int power, Mod owner) {
         for (Bomb b : activeBombs) {
             if (b.getX() == x && b.getY() == y) {
                 return false;
@@ -60,7 +60,7 @@ public class BombManager {
         int bY = exp.getY();
         int power = exp.getPower();
 
-        for (PlayerOb p : players) {
+        for (Mod p : players) {
             if (!p.isAlive()) continue;
 
             int pX = (int) Math.round(p.getX());
