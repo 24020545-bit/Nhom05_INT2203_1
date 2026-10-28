@@ -1,4 +1,3 @@
-
 package entity.Mob;
 
 import map.GameMap;
@@ -6,10 +5,13 @@ import manager.BombManager;
 import utils.Direction;
 
 import java.awt.Graphics2D;
+import java.awt.Rectangle;
 
 public abstract class Mob {
     protected double x;
     protected double y;
+    protected int width;
+    protected int height;
 
     protected boolean survival;
     protected boolean deading;
@@ -20,12 +22,14 @@ public abstract class Mob {
     protected int bombLimit;
     protected int activeBombCount;
 
-    protected boolean flamepass;
+    protected Direction currentDirection;
 
-    protected Mob(double x, double y, int lives,
+    protected Mob(double x, double y, int width, int height, int lives,
                   int speed, int power, int bombLimit) {
         this.x = x;
         this.y = y;
+        this.width = width;
+        this.height = height;
         this.lives = lives;
         this.speed = speed;
         this.power = power;
@@ -34,8 +38,10 @@ public abstract class Mob {
         this.activeBombCount = 0;
         this.survival = true;
         this.deading = false;
-        this.flamepass = false;
+        this.currentDirection = Direction.DOWN; // Hướng mặc định ban đầu
     }
+
+    public abstract void update();
 
     public abstract void draw(Graphics2D g2d);
 
@@ -44,6 +50,11 @@ public abstract class Mob {
             GameMap gameMap,
             BombManager bombManager
     );
+
+    // Trả về vùng va chạm (Hitbox) phục vụ kiểm tra va chạm với tường, bom, lửa
+    public Rectangle getBounds() {
+        return new Rectangle((int) x, (int) y, width, height);
+    }
 
     public double getX() {
         return x;
@@ -58,6 +69,22 @@ public abstract class Mob {
         this.y = y;
     }
 
+    public int getWidth() {
+        return width;
+    }
+
+    public void setWidth(int width) {
+        this.width = width;
+    }
+
+    public int getHeight() {
+        return height;
+    }
+
+    public void setHeight(int height) {
+        this.height = height;
+    }
+
     public boolean isDeading() {
         return deading;
     }
@@ -70,12 +97,12 @@ public abstract class Mob {
         this.survival = survival;
     }
 
-    public boolean isFlamepass() {
-        return flamepass;
+    public Direction getCurrentDirection() {
+        return currentDirection;
     }
 
-    public void setFlamepass(boolean flamepass) {
-        this.flamepass = flamepass;
+    public void setCurrentDirection(Direction currentDirection) {
+        this.currentDirection = currentDirection;
     }
 
     public int getLives() {
