@@ -3,7 +3,7 @@ package manager;
 import map.GameMap;
 import bomb.Bomb;
 import bomb.Explosion;
-import entity.Mob.Mob; // Đảm bảo đúng package chứa lớp Mob của bạn
+import entity.Mob; // Đảm bảo đúng package chứa lớp Mob của bạn
 
 import java.util.ArrayList;
 import java.util.List;

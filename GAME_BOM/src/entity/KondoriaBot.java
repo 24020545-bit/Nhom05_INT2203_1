@@ -1,4 +1,4 @@
-package entity.Mob;
+package entity;
 
 
 import map.GameMap;
@@ -8,11 +8,11 @@ import utils.Direction;
 import java.awt.Graphics2D;
 import java.awt.Color;
 
-public class Kondoria extends Mob {
+public class KondoriaBot extends Mob {
     private Player targetPlayer; // Người chơi để đuổi theo
     private int updateTargetCounter = 0;
 
-    public Kondoria(double x, double y, int width, int height, int speed, Player targetPlayer) {
+    public KondoriaBot(double x, double y, int width, int height, int speed, Player targetPlayer) {
         // Gọi constructor của Mob (lives = 1, power = 0, bombLimit = 0)
         super(x, y, width, height, 1, speed, 0, 0);
         this.targetPlayer = targetPlayer;

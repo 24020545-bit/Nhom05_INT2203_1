@@ -3,22 +3,32 @@ package entity;
 import map.GameMap;
 import manager.BombManager;
 import utils.Direction;
+import java.awt.Graphics2D;
 
-public class Player extends Mod {
+public class Player extends Mob {
     private String name;
 
     public Player(double x, double y, double speed, int lives,
                   int bombLimit, int power, String name) {
-        super(x, y, speed, lives, bombLimit, power);
+        // Gọi constructor của lớp cha Mob: (x, y, width, height, lives, speed, power, bombLimit)
+        super(x, y, 32, 32, lives, (int) speed, power, bombLimit);
         this.name = name;
+        this.survival = true;
     }
 
     @Override
-    public void move(Direction direction) {}
+    public void update() {
+        // Xử lý logic cập nhật của player nếu cần
+    }
 
-    // [CẬP NHẬT] Thêm tham số bombManager để check va chạm với bom
+    @Override
+    public void draw(Graphics2D g2d) {
+        // Code vẽ player (nếu bạn vẽ trực tiếp ở đây)
+    }
+
+    @Override
     public void move(Direction direction, GameMap gameMap, BombManager bombManager) {
-        if (!isAlive || direction == null || gameMap == null) {
+        if (!survival || direction == null || gameMap == null) {
             return;
         }
 
@@ -49,12 +59,10 @@ public class Player extends Mod {
                 break;
             }
 
-            // 2. [MỚI] Kiểm tra xem ô tiếp theo có bom hay không
+            // 2. Kiểm tra xem ô tiếp theo có bom hay không
             if (bombManager != null) {
                 var hitBomb = bombManager.getBombAt(targetTileX, targetTileY);
                 if (hitBomb != null) {
-                    // Nếu người chơi đang đứng NGAY TẠI ô chứa quả bom đó (vừa đặt xong), cho phép đi qua/thoát ra.
-                    // Ngược lại, nếu từ ô khác bước vào ô có bom -> Chặn lại!
                     int currentTileX = (int) Math.round(this.x);
                     int currentTileY = (int) Math.round(this.y);
 
@@ -64,7 +72,7 @@ public class Player extends Mod {
                 }
             }
 
-            // Nếu mọi thứ an toàn, cập nhật tọa độ tạm thời
+            // Cập nhật tọa độ tạm thời
             x = nextX;
             y = nextY;
 

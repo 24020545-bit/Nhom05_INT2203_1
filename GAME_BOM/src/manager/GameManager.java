@@ -1,7 +1,6 @@
 package manager;
 
 import UI.MapPanel;
-import entity.Bot;
 import entity.Player;
 import entity.Mod;
 import map.GameMap;

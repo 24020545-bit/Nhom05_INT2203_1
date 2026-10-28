@@ -1,7 +1,6 @@
 package UI;
 
 import UI.Screen.HUDPanel;
-import entity.Bot;
 import manager.BombManager;
 import manager.ItemManager;
 import map.GameMap;

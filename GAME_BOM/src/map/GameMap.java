@@ -14,7 +14,7 @@ public class GameMap {
     public static final char WALL_BRICK = 'X'; // Tường gạch (phá được bằng bom)
 
     private List<char[][]> mapList;
-    private List<String[]> rawMapTemplates; // [MỚI] Lưu lại bản thiết kế gốc để reset map
+    private List<String[]> rawMapTemplates; // Lưu lại bản thiết kế gốc để reset map
     private int currentMapIndex;
 
     public GameMap() {
@@ -79,7 +79,7 @@ public class GameMap {
     }
 
     /**
-     * [MỚI THÊM] Khôi phục lại toàn bộ bản đồ về trạng thái ban đầu (hồi phục tường gạch)
+     * Khôi phục lại toàn bộ bản đồ về trạng thái ban đầu (hồi phục tường gạch)
      */
     public void resetMap() {
         mapList.clear();
@@ -158,5 +158,26 @@ public class GameMap {
             return false;
         }
         return getTile(x, y) == EMPTY;
+    }
+
+    /**
+     * [ĐÃ THÊM] Kiểm tra va chạm theo tọa độ pixel của Mob/Bot với tường cứng hoặc tường gạch.
+     */
+    public boolean checkCollision(double nextX, double nextY, int width, int height) {
+        int tileSize = 32; // Kích thước 1 ô tile trong game (32 pixel)
+
+        int leftTile = (int) (nextX / tileSize);
+        int rightTile = (int) ((nextX + width - 1) / tileSize);
+        int topTile = (int) (nextY / tileSize);
+        int bottomTile = (int) ((nextY + height - 1) / tileSize);
+
+        return isSolid(leftTile, topTile) || isSolid(rightTile, topTile) ||
+                isSolid(leftTile, bottomTile) || isSolid(rightTile, bottomTile);
+    }
+
+    // Hàm phụ trợ kiểm tra xem ô tile có phải vật cản không
+    private boolean isSolid(int tileX, int tileY) {
+        char tile = getTile(tileX, tileY);
+        return tile == WALL_SOLID || tile == WALL_BRICK;
     }
 }

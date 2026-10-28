@@ -1,6 +1,5 @@
 package UI.Screen;
 
-import entity.Bot;
 import entity.Player;
 import entity.Mod;
 
