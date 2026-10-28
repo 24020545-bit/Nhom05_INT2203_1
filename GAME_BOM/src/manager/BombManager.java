@@ -3,7 +3,7 @@ package manager;
 import map.GameMap;
 import bomb.Bomb;
 import bomb.Explosion;
-import entity.Mod;
+import entity.Mob.Mob; // Đảm bảo đúng package chứa lớp Mob của bạn
 
 import java.util.ArrayList;
 import java.util.List;
@@ -12,18 +12,18 @@ public class BombManager {
     private List<Bomb> activeBombs;
     private List<Explosion> activeExplosions;
     private GameMap gameMap;
-    private List<Mod> players;
+    private List<Mob> mobs; // Đổi từ players thành danh sách tổng quát các Mob (bao gồm Player và Bot)
     private ItemManager itemManager;
 
-    public BombManager(GameMap gameMap, List<Mod> players, ItemManager itemManager) {
+    public BombManager(GameMap gameMap, List<Mob> mobs, ItemManager itemManager) {
         this.gameMap = gameMap;
-        this.players = players;
+        this.mobs = mobs;
         this.itemManager = itemManager;
         this.activeBombs = new ArrayList<>();
         this.activeExplosions = new ArrayList<>();
     }
 
-    public boolean placeBomb(int x, int y, int power, Mod owner) {
+    public boolean placeBomb(int x, int y, int power, Mob owner) {
         for (Bomb b : activeBombs) {
             if (b.getX() == x && b.getY() == y) {
                 return false;
@@ -46,7 +46,6 @@ public class BombManager {
     }
 
     public void triggerExplosion(int bombX, int bombY, int power) {
-        // Truyền thêm 'this' (BombManager) vào Explosion để xử lý lan truyền bom
         Explosion explosion = new Explosion(bombX, bombY, power, gameMap, itemManager, this);
         activeExplosions.add(explosion);
 
@@ -54,26 +53,29 @@ public class BombManager {
     }
 
     private void checkExplosionDamage(Explosion exp) {
-        if (players == null) return;
+        if (mobs == null) return;
 
         int bX = exp.getX();
         int bY = exp.getY();
         int power = exp.getPower();
 
-        for (Mod p : players) {
-            if (!p.isAlive()) continue;
+        for (Mob mob : mobs) {
+            // Kiểm tra nếu mob còn sống mới xét sát thương
+            if (!mob.isSurvival()) continue;
 
-            int pX = (int) Math.round(p.getX());
-            int pY = (int) Math.round(p.getY());
+            // Chuyển đổi tọa độ pixel của mob sang tọa độ ô lưới (tile) tương ứng để so sánh với lửa
+            int tileSize = 32; // Thay đổi kích thước tile cho khớp với game của bạn (ví dụ: 32 hoặc 48)
+            int mobX = (int) Math.round(mob.getX() / tileSize);
+            int mobY = (int) Math.round(mob.getY() / tileSize);
 
-            if (isInExplosionArea(pX, pY, bX, bY, power)) {
-                p.takeDamage();
+            if (isInExplosionArea(mobX, mobY, bX, bY, power)) {
+                mob.die(); // Gọi hàm die() có sẵn trong lớp Mob để tiêu diệt Player hoặc Bot
             }
         }
     }
 
-    private boolean isInExplosionArea(int pX, int pY, int bX, int bY, int power) {
-        if (pX == bX && pY == bY) return true;
+    private boolean isInExplosionArea(int mobX, int mobY, int bX, int bY, int power) {
+        if (mobX == bX && mobY == bY) return true;
 
         int[][] directions = {{0, -1}, {0, 1}, {-1, 0}, {1, 0}};
         for (int[] d : directions) {
@@ -83,12 +85,12 @@ public class BombManager {
 
                 if (!gameMap.isWalkable(fireX, fireY) && gameMap.getTile(fireX, fireY) != GameMap.EMPTY) {
                     if (gameMap.getTile(fireX, fireY) == GameMap.WALL_BRICK) {
-                        if (pX == fireX && pY == fireY) return true;
+                        if (mobX == fireX && mobY == fireY) return true;
                     }
                     break;
                 }
 
-                if (pX == fireX && pY == fireY) {
+                if (mobX == fireX && mobY == fireY) {
                     return true;
                 }
             }

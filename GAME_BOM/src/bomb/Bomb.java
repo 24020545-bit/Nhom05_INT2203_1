@@ -1,7 +1,7 @@
 package bomb;
 
 import map.GameMap;
-import entity.Mod;
+import entity.Mob.Mob;
 import manager.BombManager;
 
 import java.awt.*;
@@ -12,13 +12,13 @@ public class Bomb {
     private int x;
     private int y;
     private int power;
-    private Mod owner;
+    private Mob owner;
     private GameMap gameMap;
     private BombManager bombManager; // Tham chiếu đến BombManager để báo cáo vụ nổ
     private boolean isExploded;
     private Timer timer;
 
-    public Bomb(int x, int y, int power, Mod owner, GameMap gameMap, BombManager bombManager) {
+    public Bomb(int x, int y, int power, Mob owner, GameMap gameMap, BombManager bombManager) {
         this.x = x;
         this.y = y;
         this.power = power;
@@ -74,11 +74,14 @@ public class Bomb {
     // ==========================================
     // HÀM VẼ QUẢ BOM LÊN MÀN HÌNH
     // ==========================================
+    // ==========================================
+    // HÀM VẼ QUẢ BOM LÊN MÀN HÌNH
+    // ==========================================
     public void draw(Graphics2D g2d, int tileSize) {
         if (isExploded) return;
 
-        int drawX = x * tileSize;
-        int drawY = y * tileSize;
+        int drawX = x * tileSize; // Đã thêm dấu nhân *
+        int drawY = y * tileSize; // Đã thêm dấu nhân *
 
         // Thân quả bom (Hình tròn xám đậm)
         g2d.setColor(new Color(30, 30, 30));
@@ -86,12 +89,6 @@ public class Bomb {
 
         // Ngòi nổ (Chấm đỏ nhỏ ở giữa)
         g2d.setColor(Color.RED);
-        g2d.fillOval(drawX + tileSize / 2 - 3, drawY + 3, 6, 6);
+        g2d.fillOval(drawX + tileSize / 2 - 3, drawY + 3, 6, 6); // Đã nối lại dòng và thêm dấu trừ -
     }
-
-    public int getX() { return x; }
-    public int getY() { return y; }
-    public int getPower() { return power; }
-    public Mod getOwner() { return owner; }
-    public boolean isExploded() { return isExploded; }
 }
