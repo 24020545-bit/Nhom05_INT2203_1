@@ -1,4 +1,4 @@
-package entity.Mob;
+package entity.mob;
 
 
 public enum Ways {

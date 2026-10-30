@@ -1,4 +1,4 @@
-package entity.Mob;
+package entity.mob;
 
 
 import java.util.ArrayList;
