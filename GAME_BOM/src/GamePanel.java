@@ -3,96 +3,131 @@ import java.awt.*;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 
-public class GamePanel extends JPanel {
-    private GameMap gameMap;
-    private PlayerOb player;
-    private final int TILE_SIZE = 40; // Kích thước của 1 ô (bom, nhân vật)
+public class GamePanel extends JPanel implements Runnable {
+
+    // Cấu hình màn hình / kích thước ô (Tile)
+    public static final int ORIGINAL_TILE_SIZE = 16; // Kích thước gốc của tile (16x16)
+    public static final int SCALE = 3; // Hệ số phóng to
+    public static final int TILE_SIZE = ORIGINAL_TILE_SIZE * SCALE; // 48x48 pixels mỗi ô
+
+    // Kích thước màn hình (ví dụ: 31 cột x 13 hàng theo chuẩn Bomberman)
+    public static final int MAX_SCREEN_COL = 31;
+    public static final int MAX_SCREEN_ROW = 13;
+    public static final int SCREEN_WIDTH = TILE_SIZE * MAX_SCREEN_COL;
+    public static final int SCREEN_HEIGHT = TILE_SIZE * MAX_SCREEN_ROW;
+
+    // FPS (Frames Per Second)
+    private final int FPS = 60;
+
+    // Game Thread quản lý vòng lặp
+    private Thread gameThread;
+    private boolean isRunning = false;
+
+    // --- CÁC THÀNH PHẦN KHÁC (Gắn kết từ code của nhóm bạn) ---
+    // Ví dụ: MapLoader / Map, Player, danh sách Enemies, Bombs, v.v.
+    // private Map map;
+    // private Player player;
+    // private List<Entity> entities;
+    // private KeyHandler keyH = new KeyHandler(); // Lớp sử lý phím bấm riêng
 
     public GamePanel() {
-        setFocusable(true);
-        setBackground(Color.DARK_GRAY);
+        this.setPreferredSize(new Dimension(SCREEN_WIDTH, SCREEN_HEIGHT));
+        this.setBackground(Color.BLACK);
+        this.setDoubleBuffered(true); // Tăng hiệu năng hiển thị đồ họa
 
-        // Khởi tạo hệ thống
-        gameMap = new GameMap();
+        // Đăng ký bộ lắng nghe bàn phím
+        // this.addKeyListener(keyH);
+        this.setFocusable(true);
 
-        // Tạo nhân vật ẩn danh kế thừa từ PlayerOb bạn đã viết
-        // Tọa độ (100,100), tốc độ 5, mạng 3, giới hạn 2 bom, sức công phá 1 ô
-        player = new PlayerOb(100, 100, 5.0, 3, 2) {
-            @Override
-            public void move(Direction direction) {
-                // Logic di chuyển phức tạp sẽ để ở đây sau
-            }
-        };
-
-        // Lắng nghe bàn phím
-        addKeyListener(new KeyAdapter() {
-            @Override
-            public void keyPressed(KeyEvent e) {
-                int key = e.getKeyCode();
-                int speed = (int) player.getSpeed();
-
-                // Di chuyển
-                if (key == KeyEvent.VK_W) player.setY(player.getY() - speed);
-                if (key == KeyEvent.VK_S) player.setY(player.getY() + speed);
-                if (key == KeyEvent.VK_A) player.setX(player.getX() - speed);
-                if (key == KeyEvent.VK_D) player.setX(player.getX() + speed);
-
-                // Đặt bom
-                if (key == KeyEvent.VK_SPACE) {
-                    player.placeBomb(gameMap);
-                }
-            }
-        });
-
-        // Game Loop: Vẽ lại màn hình liên tục (khoảng 60 khung hình/giây)
-        new Timer(16, e -> repaint()).start();
+        // Khởi tạo các đối tượng game (Bản đồ, Người chơi, Kẻ địch...)
+        initGame();
     }
 
+    /**
+     * Khởi tạo bản đồ, người chơi và các thực thể từ các class khác.
+     */
+    private void initGame() {
+        // TODO: Khởi tạo Map từ file text (ví dụ: map.loadMap("res/levels/level1.txt"));
+        // TODO: Khởi tạo Player tại vị trí bắt đầu.
+        // TODO: Khởi tạo danh sách kẻ địch (Doll, Kondoria, Oneal...).
+    }
+
+    /**
+     * Bắt đầu luồng chạy game (Game Thread).
+     */
+    public void startGameThread() {
+        gameThread = new Thread(this);
+        isRunning = true;
+        gameThread.start();
+    }
+
+    @Override
+    public void run() {
+        // Game Loop chuẩn dùng Delta Time hoặc Sleep Timer để giữ ổn định 60 FPS
+        double drawInterval = 1000000000.0 / FPS;
+        double delta = 0;
+        long lastTime = System.nanoTime();
+        long currentTime;
+        long timer = 0;
+        int drawCount = 0;
+
+        while (isRunning) {
+            currentTime = System.nanoTime();
+            delta += (currentTime - lastTime) / drawInterval;
+            timer += (currentTime - lastTime);
+            lastTime = currentTime;
+
+            if (delta >= 1) {
+                // 1. Cập nhật vị trí, trạng thái, va chạm
+                update();
+
+                // 2. Vẽ lại màn hình
+                repaint();
+
+                delta--;
+                drawCount++;
+            }
+
+            // Kiểm tra mỗi giây để debug FPS nếu cần
+            if (timer >= 1000000000.0) {
+                // System.out.println("FPS: " + drawCount);
+                drawCount = 0;
+                timer = 0;
+            }
+        }
+    }
+
+    /**
+     * Cập nhật logic game ở mỗi frame (60 lần/giây).
+     */
+    private void update() {
+        // TODO: Gọi hàm update của Map, Player, Bombs, Enemies (Doll, Kondoria, Oneal...)
+        // Ví dụ:
+        // player.update();
+        // for(Entity enemy : enemies) { enemy.update(); }
+        // checkCollisions();
+    }
+
+    /**
+     * Vẽ đồ họa lên màn hình Swing.
+     */
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
 
-        // 1. VẼ CÁC QUẢ BOM (Hình tròn đỏ)
-        g.setColor(Color.RED);
-        for (Bomb bomb : gameMap.getBombs()) {
-            g.fillOval(bomb.getX(), bomb.getY(), TILE_SIZE, TILE_SIZE);
-        }
+        // Ép kiểu sang Graphics2D để có các tính năng đồ họa nâng cao hơn nếu cần
+        Graphics2D g2 = (Graphics2D) g;
 
-        // 2. VẼ CÁC VỤ NỔ (Hình chữ thập màu cam)
-        g.setColor(Color.ORANGE);
-        for (Explosion exp : gameMap.getExplosions()) {
-            int ex = exp.getX();
-            int ey = exp.getY();
-            int power = exp.getPower();
+        // TODO: Thứ tự vẽ rất quan trọng (Z-index / Layer)
+        // 1. Vẽ bản đồ / nền (Map / Tiles)
+        // if (map != null) map.draw(g2);
 
-            // Vẽ tâm vụ nổ
-            g.fillRect(ex, ey, TILE_SIZE, TILE_SIZE);
+        // 2. Vẽ các vật thể / bom (Bombs & Flames)
 
-            // Vẽ tia lửa lan ra 4 hướng dựa trên power
-            for (int i = 1; i <= power; i++) {
-                g.fillRect(ex + (i * TILE_SIZE), ey, TILE_SIZE, TILE_SIZE); // Phải
-                g.fillRect(ex - (i * TILE_SIZE), ey, TILE_SIZE, TILE_SIZE); // Trái
-                g.fillRect(ex, ey + (i * TILE_SIZE), TILE_SIZE, TILE_SIZE); // Dưới
-                g.fillRect(ex, ey - (i * TILE_SIZE), TILE_SIZE, TILE_SIZE); // Trên
-            }
-        }
+        // 3. Vẽ người chơi và kẻ địch (Player, Doll, Oneal, Kondoria...)
+        // if (player != null) player.draw(g2);
 
-        // 3. VẼ NHÂN VẬT (Hình vuông xanh dương)
-        g.setColor(Color.CYAN);
-        g.fillRect(player.getX(), player.getY(), TILE_SIZE, TILE_SIZE);
-
-        // Hiển thị trạng thái số lượng bom
-        g.setColor(Color.WHITE);
-        g.drawString("Bom đang đặt: " + player.getActiveBombCount() + "/" + player.getBombLimit(), 10, 20);
-    }
-
-    // Cửa sổ khởi chạy (Có thể tách ra file GameWindow riêng)
-    public static void main(String[] args) {
-        JFrame frame = new JFrame("Bomberman - Chạy Thử");
-        frame.add(new GamePanel());
-        frame.setSize(800, 600);
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setLocationRelativeTo(null);
-        frame.setVisible(true);
+        // 4. Giải phóng tài nguyên đồ họa 2D
+        g2.dispose();
     }
 }

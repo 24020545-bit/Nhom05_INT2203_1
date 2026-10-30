@@ -9,29 +9,51 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class GameMap {
-    public static final char EMPTY = ' ';      // Đường đi (ô trống)
-    public static final char WALL_SOLID = '#';  // Tường cố định (không phá được)
-    public static final char WALL_BRICK = 'X'; // Tường gạch (phá được bằng bom)
+    // Quy chuẩn mới:
+    // 0: Đường đi (ô trống)
+    // 1: Tường gạch (phá được bằng bom)
+    // 2: Tường cố định (không phá được)
+    public static final char EMPTY = '0';
+    public static final char WALL_BRICK = '1';
+    public static final char WALL_SOLID = '2';
 
     private List<char[][]> mapList;
     private List<String[]> rawMapTemplates; // Lưu lại bản thiết kế gốc để reset map
     private int currentMapIndex;
 
+    // Định nghĩa 4 loại vật phẩm theo yêu cầu
+    public enum ItemType {
+        DAMAGE_UP(6),  // Gán mã số 6 trên mapHash cho item Tăng sát thương
+        SPEED_UP(7),   // Gán mã số 7 trên mapHash cho item Tăng tốc độ
+        RANGE_UP(8),   // Gán mã số 8 trên mapHash cho item Tăng phạm vi bom
+        HEAL(9);       // Gán mã số 9 trên mapHash cho item Hồi máu
+
+        private final int mapValue;
+
+        ItemType(int mapValue) {
+            this.mapValue = mapValue;
+        }
+
+        public int getMapValue() {
+            return mapValue;
+        }
+    }
+
     public GameMap() {
         mapList = new ArrayList<>();
         rawMapTemplates = new ArrayList<>();
 
-        // Đọc danh sách map từ file txt (ví dụ: "map.txt")
+        // Đọc danh sách map từ file txt
         loadMapsFromFile("map.txt");
 
-        // Nếu file trống hoặc lỗi, tạo sẵn 1 map mặc định để tránh crash game
+        // Nếu file trống hoặc lỗi, tạo sẵn 1 map mẫu chuẩn quy ước mới (0, 1, 2)
         if (mapList.isEmpty()) {
             String[] defaultMap = {
-                    "#########",
-                    "#.......#",
-                    "#.###.#.#",
-                    "#.#...#.#",
-                    "#########"
+                    "222222222",
+                    "200000002",
+                    "202121202",
+                    "200000002",
+                    "222222222"
             };
             rawMapTemplates.add(defaultMap);
             mapList.add(parseStringToMap(defaultMap));
@@ -104,10 +126,13 @@ public class GameMap {
             for (int x = 0; x < width; x++) {
                 if (x < rowStr.length()) {
                     char c = rowStr.charAt(x);
-                    if (c == '.') {
-                        grid[y][x] = EMPTY;
-                    } else {
+
+                    // Chỉ nhận các ký tự chuẩn quy ước mới và các giá trị Item (6-9)
+                    if (c == '0' || c == '1' || c == '2' || (c >= '6' && c <= '9')) {
                         grid[y][x] = c;
+                    } else {
+                        // Mặc định các ký tự lạ khác coi như ô trống (0)
+                        grid[y][x] = EMPTY;
                     }
                 } else {
                     grid[y][x] = EMPTY;
@@ -157,11 +182,13 @@ public class GameMap {
         if (x < 0 || x >= getWidth() || y < 0 || y >= getHeight()) {
             return false;
         }
-        return getTile(x, y) == EMPTY;
+        char tile = getTile(x, y);
+        // Đi được khi là ô trống ('0') hoặc vị trí có chứa item (6, 7, 8, 9)
+        return tile == EMPTY || (tile >= '6' && tile <= '9');
     }
 
     /**
-     * [ĐÃ THÊM] Kiểm tra va chạm theo tọa độ pixel của Mob/Bot với tường cứng hoặc tường gạch.
+     * Kiểm tra va chạm theo tọa độ pixel của Mob/Bot với tường cứng hoặc tường gạch.
      */
     public boolean checkCollision(double nextX, double nextY, int width, int height) {
         int tileSize = 32; // Kích thước 1 ô tile trong game (32 pixel)
@@ -178,6 +205,7 @@ public class GameMap {
     // Hàm phụ trợ kiểm tra xem ô tile có phải vật cản không
     private boolean isSolid(int tileX, int tileY) {
         char tile = getTile(tileX, tileY);
+        // Tường gạch ('1') và Tường cố định ('2') là vật cản
         return tile == WALL_SOLID || tile == WALL_BRICK;
     }
 }
