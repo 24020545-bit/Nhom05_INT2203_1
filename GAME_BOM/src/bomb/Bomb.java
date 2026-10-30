@@ -22,6 +22,9 @@ public class Bomb {
     private int explosionRange = 2;
     private int damage = 1; // Sát thương nhận từ Player
 
+    // Biến đếm thời gian cho phép người chơi thoải mái bước ra khỏi ô bom mà không bị kẹt
+    private int safeWalkTimer = 40;
+
     private int flameLeft = 0;
     private int flameRight = 0;
     private int flameUp = 0;
@@ -41,7 +44,7 @@ public class Bomb {
         this.damage = damage;
 
         loadImages();
-        updateMapHash(4); // Đánh dấu ô chứa bom bằng giá trị 4
+        updateMapHash(5); // Ban đầu gán là 5 để cho phép người chơi đi qua an toàn
     }
 
     private void loadImages() {
@@ -59,7 +62,6 @@ public class Bomb {
         }
     }
 
-    // Trong Bomb.java
     public void update() {
         if (!active) return;
 
@@ -73,11 +75,17 @@ public class Bomb {
         int i = (int) (y / TILE_SIZE);
 
         if (!exploded) {
-            // Kiểm tra xem người chơi còn đứng trên ô bom hay không để phân 2 trạng thái mapHash (4 và 5)
-            if (entityHasLeft(j, i)) {
-                mapHash[i][j] = 4; // Đã rời đi -> Trở thành vật cản hoàn toàn
+            // Trong khoảng thời gian an toàn đầu tiên, luôn giữ mã 5 để tránh kẹt tuyệt đối
+            if (safeWalkTimer > 0) {
+                safeWalkTimer--;
+                mapHash[i][j] = 5;
             } else {
-                mapHash[i][j] = 5; // Vẫn đang đứng đè -> Cho phép đi qua để tránh kẹt
+                // Hết thời gian an toàn, kiểm tra xem người chơi đã rời đi thật chưa
+                if (entityHasLeft(j, i)) {
+                    mapHash[i][j] = 4; // Đã rời đi -> Khóa lại thành vật cản hoàn toàn
+                } else {
+                    mapHash[i][j] = 5; // Vẫn đang đứng đè -> Giữ cho đi qua
+                }
             }
 
             fuseTimer++;
@@ -97,12 +105,19 @@ public class Bomb {
 
     // Hàm kiểm tra xem người chơi đã rời khỏi ô chứa bom này chưa
     private boolean entityHasLeft(int bombTileX, int bombTileY) {
-        for (Mob mob : entity.mob.Mobs.MOBS) {
-            if (mob.isSurvival()) {
-                Rectangle mobBounds = mob.getBounds();
-                Rectangle bombTileBounds = new Rectangle(bombTileX * TILE_SIZE, bombTileY * TILE_SIZE, TILE_SIZE, TILE_SIZE);
-                if (mobBounds.intersects(bombTileBounds)) {
-                    return false; // Vẫn có bot hoặc player đứng đè lên
+        for (Mob mob : Mobs.MOBS) {
+            if (mob.isSurvival() && mob instanceof Player) {
+                double playerCenterX = mob.getX() + mob.getWidth() / 2.0;
+                double playerCenterY = mob.getY() + mob.getHeight() / 2.0;
+
+                int tileLeft = bombTileX * TILE_SIZE;
+                int tileRight = (bombTileX + 1) * TILE_SIZE;
+                int tileTop = bombTileY * TILE_SIZE;
+                int tileBottom = (bombTileY + 1) * TILE_SIZE;
+
+                if (playerCenterX >= tileLeft && playerCenterX < tileRight &&
+                        playerCenterY >= tileTop && playerCenterY < tileBottom) {
+                    return false;
                 }
             }
         }
@@ -133,7 +148,7 @@ public class Bomb {
             int targetX = tileX + i;
             if (targetX >= mapHash[0].length) break;
             int tileVal = mapHash[tileY][targetX];
-            if (tileVal == 0) {
+            if (tileVal == 0 || tileVal == 5) {
                 flameRight++;
             } else {
                 if (tileVal == 1 || tileVal == 3) {
@@ -149,7 +164,7 @@ public class Bomb {
             int targetX = tileX - i;
             if (targetX < 0) break;
             int tileVal = mapHash[tileY][targetX];
-            if (tileVal == 0) {
+            if (tileVal == 0 || tileVal == 5) {
                 flameLeft++;
             } else {
                 if (tileVal == 1 || tileVal == 3) {
@@ -165,7 +180,7 @@ public class Bomb {
             int targetY = tileY - i;
             if (targetY < 0) break;
             int tileVal = mapHash[targetY][tileX];
-            if (tileVal == 0) {
+            if (tileVal == 0 || tileVal == 5) {
                 flameUp++;
             } else {
                 if (tileVal == 1 || tileVal == 3) {
@@ -181,7 +196,7 @@ public class Bomb {
             int targetY = tileY + i;
             if (targetY >= mapHash.length) break;
             int tileVal = mapHash[targetY][tileX];
-            if (tileVal == 0) {
+            if (tileVal == 0 || tileVal == 5) {
                 flameDown++;
             } else {
                 if (tileVal == 1 || tileVal == 3) {
@@ -194,8 +209,6 @@ public class Bomb {
     }
 
     private void checkFlameDamage() {
-        // Chỉ gây sát thương khi explodeTimer chia hết cho 15 (tức là cách khoảng nửa giây mới check 1 lần)
-        // Hoặc nếu chỉ muốn gây sát thương đúng 1 lần duy nhất khi vừa nổ: if (explodeTimer == 1)
         if (explodeTimer % 15 != 0) return;
 
         Rectangle bombCenterRect = getBounds();
@@ -293,7 +306,7 @@ public class Bomb {
                     if (i == flameUp) {
                         g2dRot.drawImage(tipImg, ix, iy - i * TILE_SIZE, TILE_SIZE, TILE_SIZE, null);
                     } else {
-                        g2dRot.drawImage(bodyImg, ix, iy - i * TILE_SIZE, TILE_SIZE, TILE_SIZE, null); // Hoặc giữ nguyên g2dRot
+                        g2dRot.drawImage(bodyImg, ix, iy - i * TILE_SIZE, TILE_SIZE, TILE_SIZE, null);
                     }
                     g2dRot.dispose();
                 }

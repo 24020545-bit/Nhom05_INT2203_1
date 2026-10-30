@@ -1,5 +1,6 @@
-package entity;
+package entity.bot;
 
+import entity.mob.Mob;
 import utils.Direction;
 
 import java.awt.Graphics2D;
