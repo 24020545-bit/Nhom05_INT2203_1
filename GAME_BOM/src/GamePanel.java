@@ -1,3 +1,4 @@
+
 import entity.Player;
 import entity.bot.DollBot;
 import entity.bot.KondoriaBot;
@@ -5,6 +6,7 @@ import entity.mob.Mob;
 import entity.mob.Mobs;
 import bomb.Bomb;
 import item.Item;
+import map.GameMap;
 
 import javax.swing.*;
 import java.awt.*;
@@ -14,47 +16,71 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class GamePanel extends JPanel {
-    private final int TILE_SIZE = 32; // Khớp với kích thước TILE_SIZE trong Bomb, Player, Bot, Item
-    private int[][] mapHash;          // Ma trận bản đồ
+
+    private final int TILE_SIZE = 32;
+
+    private GameMap gameMap;
     private Player player;
-    private List<Bomb> activeBombs;   // Danh sách quản lý bom toàn cục
+    private List<Bomb> activeBombs;
     private Timer gameTimer;
 
     public GamePanel() {
+
         setFocusable(true);
         setBackground(Color.DARK_GRAY);
         setPreferredSize(new Dimension(800, 600));
 
-        // 1. Khởi tạo bản đồ mẫu
-        initMap();
+        // 1. Khởi tạo bản đồ từ GameMap
+        gameMap = new GameMap();
 
-        // 2. Khởi tạo Người chơi (Player) tại vị trí (1, 1)
-        player = new Player(TILE_SIZE, TILE_SIZE, mapHash);
+        // 2. Khởi tạo Player
+        player = new Player(TILE_SIZE, TILE_SIZE, gameMap.getGrid());
         Mobs.add(player);
 
-        // 3. Khởi tạo danh sách bom trống
+        // 3. Khởi tạo danh sách bom
         activeBombs = new ArrayList<>();
 
-        // 4. Thêm Bot mẫu để kiểm tra va chạm
-        Mobs.add(new DollBot(5 * TILE_SIZE, 3 * TILE_SIZE, TILE_SIZE, TILE_SIZE, 1, mapHash));
-        Mobs.add(new KondoriaBot(7 * TILE_SIZE, 3 * TILE_SIZE, TILE_SIZE, TILE_SIZE, 1, player, mapHash));
+        // 4. Khởi tạo Bot
+        Mobs.add(new DollBot(
+                5 * TILE_SIZE,
+                3 * TILE_SIZE,
+                TILE_SIZE,
+                TILE_SIZE,
+                1,
+                gameMap.getGrid()
+        ));
 
-        // 5. Thêm một số Item mẫu
-        Mobs.add(new Item(3 * TILE_SIZE, 1 * TILE_SIZE, Item.ItemType.RANGE_UP, mapHash));
-        Mobs.add(new Item(4 * TILE_SIZE, 1 * TILE_SIZE, Item.ItemType.SPEED_UP, mapHash));
+        Mobs.add(new KondoriaBot(
+                7 * TILE_SIZE,
+                3 * TILE_SIZE,
+                TILE_SIZE,
+                TILE_SIZE,
+                1,
+                player,
+                gameMap.getGrid()
+        ));
 
-        // 6. Lắng nghe sự kiện bàn phím (Truyền trực tiếp vào Player)
+        // 5. Khởi tạo Item
+        Mobs.add(new Item(
+                3 * TILE_SIZE,
+                TILE_SIZE,
+                Item.ItemType.RANGE_UP,
+                gameMap.getGrid()
+        ));
+
+        Mobs.add(new Item(
+                4 * TILE_SIZE,
+                TILE_SIZE,
+                Item.ItemType.SPEED_UP,
+                gameMap.getGrid()
+        ));
+
+        // 6. Xử lý bàn phím
         addKeyListener(new KeyAdapter() {
+
             @Override
             public void keyPressed(KeyEvent e) {
                 player.handleKeyPressed(e);
-
-                // Đảm bảo khi bấm phím Space, bom được tạo và đưa vào danh sách quản lý chung của GamePanel
-                if (e.getKeyCode() == KeyEvent.VK_SPACE) {
-                    // Lấy danh sách bom từ Player hoặc tự tạo nếu Player đã tự quản lý danh sách riêng.
-                    // (Nếu Player.java đã tự add vào list chung, ta chỉ cần đồng bộ lấy ra nếu cần,
-                    // hoặc dùng cách dưới đây để chắc chắn activeBombs không bị rỗng):
-                }
             }
 
             @Override
@@ -63,107 +89,138 @@ public class GamePanel extends JPanel {
             }
         });
 
-        // 7. Game Loop (Chạy liên tục 60 FPS ~ 16ms)
+        // 7. Game Loop - 60 FPS
         gameTimer = new Timer(16, e -> {
             updateGame();
             repaint();
         });
+
         gameTimer.start();
     }
 
-    private void initMap() {
-        int rows = 15;
-        int cols = 20;
-        mapHash = new int[rows][cols];
-
-        for (int i = 0; i < rows; i++) {
-            for (int j = 0; j < cols; j++) {
-                if (i == 0 || i == rows - 1 || j == 0 || j == cols - 1 || (i % 2 == 0 && j % 2 == 0)) {
-                    mapHash[i][j] = 1; // Tường cố định
-                } else {
-                    mapHash[i][j] = 0; // Đường đi trống
-                }
-            }
-        }
-    }
-
+    // Cập nhật trạng thái game
     private void updateGame() {
-        // Cập nhật trạng thái tất cả các Mob (Player, Bot, Item)
+
+        // Cập nhật tất cả Mob
         for (int i = 0; i < Mobs.MOBS.size(); i++) {
             Mob mob = Mobs.MOBS.get(i);
             mob.update();
         }
 
-        // Dọn dẹp các mob đã chết (trừ Player)
-        Mobs.MOBS.removeIf(m -> !m.isSurvival() && !(m instanceof Player));
+        // Xóa Mob đã chết, ngoại trừ Player
+        Mobs.MOBS.removeIf(
+                m -> !m.isSurvival() && !(m instanceof Player)
+        );
 
-        // Lấy danh sách bom từ hành động thả bom của Player (nếu Player lưu activeBombs riêng,
-        // ta có thể cho GamePanel quét hoặc tự add. Ở đây ta cập nhật trực tiếp các bom đang hoạt động).
-        // Cách tốt nhất: Đồng bộ hóa danh sách bom từ phía Player nếu Player có quản lý:
-        // Hoặc chúng ta cập nhật trực tiếp vòng lặp cho tất cả các đối tượng Bomb có trong game.
-
-        // *Mẹo*: Để đơn giản hóa việc quản lý bom, bạn hãy bổ sung một phương thức lấy danh sách bom hoặc
-        // cho phép Bomb tự update. Nếu bạn đang dùng `player.dropBomb(mapHash, activeBombs)`,
-        // danh sách `activeBombs` ở đây sẽ tự động nhận bom khi bạn bấm Space.
-
+        // Cập nhật bom
         for (int i = activeBombs.size() - 1; i >= 0; i--) {
+
             Bomb bomb = activeBombs.get(i);
+
             bomb.update();
+
             if (!bomb.isActive()) {
                 activeBombs.remove(i);
             }
         }
+    }
 
-        // Nếu trong Player.java của bạn đang tự quản lý một list `activeBombs` riêng mà không truyền ra ngoài,
-        // bạn hãy chắc chắn rằng trong Player.java hàm `dropBomb` có truyền globalBombList vào như code mẫu trước đó.
+    // Vẽ bản đồ lấy dữ liệu từ GameMap
+    private void drawMap(Graphics2D g2d) {
+
+        int[][] grid = gameMap.getGrid();
+
+        for (int y = 0; y < gameMap.getHeight(); y++) {
+            for (int x = 0; x < gameMap.getWidth(); x++) {
+
+                int tile = grid[y][x];
+
+                switch (tile) {
+
+                    case GameMap.EMPTY:
+                        g2d.setColor(Color.DARK_GRAY);
+                        break;
+
+                    case GameMap.WALL_BRICK:
+                        g2d.setColor(new Color(160, 90, 50));
+                        break;
+
+                    case GameMap.WALL_SOLID:
+                        g2d.setColor(Color.GRAY);
+                        break;
+
+                    default:
+                        // Các ô chứa Item (6-9)
+                        g2d.setColor(Color.DARK_GRAY);
+                        break;
+                }
+
+                g2d.fillRect(
+                        x * TILE_SIZE,
+                        y * TILE_SIZE,
+                        TILE_SIZE,
+                        TILE_SIZE
+                );
+
+                g2d.setColor(Color.BLACK);
+
+                g2d.drawRect(
+                        x * TILE_SIZE,
+                        y * TILE_SIZE,
+                        TILE_SIZE,
+                        TILE_SIZE
+                );
+            }
+        }
     }
 
     @Override
     protected void paintComponent(Graphics g) {
+
         super.paintComponent(g);
+
         Graphics2D g2d = (Graphics2D) g;
 
-        // 1. Vẽ Bản đồ (Map)
-        if (mapHash != null) {
-            for (int i = 0; i < mapHash.length; i++) {
-                for (int j = 0; j < mapHash[0].length; j++) {
-                    int tileVal = mapHash[i][j];
-                    if (tileVal == 1) {
-                        g2d.setColor(Color.GRAY);
-                        g2d.fillRect(j * TILE_SIZE, i * TILE_SIZE, TILE_SIZE, TILE_SIZE);
-                        g2d.setColor(Color.BLACK);
-                        g2d.drawRect(j * TILE_SIZE, i * TILE_SIZE, TILE_SIZE, TILE_SIZE);
-                    } else {
-                        g2d.setColor(Color.DARK_GRAY);
-                        g2d.fillRect(j * TILE_SIZE, i * TILE_SIZE, TILE_SIZE, TILE_SIZE);
-                    }
-                }
-            }
-        }
+        // 1. Vẽ bản đồ
+        drawMap(g2d);
 
-        // 2. Vẽ toàn bộ danh sách Bom và hiệu ứng lửa nổ
+        // 2. Vẽ bom và hiệu ứng nổ
         for (Bomb bomb : activeBombs) {
             bomb.draw(g2d);
         }
 
-        // 3. Vẽ tất cả các Mobs (Player, Bot, Item)
+        // 3. Vẽ Player, Bot và Item
         for (Mob mob : Mobs.MOBS) {
             mob.draw(g2d);
         }
 
-        // 4. Hiển thị thông tin HUD trên màn hình
+        // 4. Vẽ HUD
         g2d.setColor(Color.WHITE);
         g2d.setFont(new Font("Arial", Font.BOLD, 14));
-        g2d.drawString("HP: " + player.getHp() + " | Sức mạnh bom: " + player.getPower() + " | Tốc độ: " + player.getSpeed(), 10, 20);
+
+        g2d.drawString(
+                "HP: " + player.getHp()
+                        + " | Sức mạnh bom: " + player.getPower()
+                        + " | Tốc độ: " + player.getSpeed(),
+                10,
+                20
+        );
     }
 
     public static void main(String[] args) {
+
         JFrame frame = new JFrame("Bomberman Game");
+
         GamePanel panel = new GamePanel();
+
         frame.add(panel);
+
         frame.pack();
+
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+
         frame.setLocationRelativeTo(null);
+
         frame.setVisible(true);
     }
 }

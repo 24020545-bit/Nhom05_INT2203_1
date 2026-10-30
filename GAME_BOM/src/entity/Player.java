@@ -7,6 +7,7 @@ import utils.Direction;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Image;
+import java.awt.Rectangle;
 import java.awt.event.KeyEvent;
 import java.util.ArrayList;
 import java.util.List;
@@ -16,6 +17,11 @@ public class Player extends Mob {
     private boolean goUp, goDown, goLeft, goRight;
     private int[][] mapHash;
     private final int TILE_SIZE = 32;
+
+    // Đặt kích thước nhỏ hơn TILE_SIZE (ví dụ 24x24) để khớp với ảnh và di chuyển mượt mà không bị vướng khoảng trống
+    private static final int PLAYER_WIDTH = 24;
+    private static final int PLAYER_HEIGHT = 32;
+
     private List<Bomb> activeBombs = new ArrayList<>();
     private int bombLimit = 1;
 
@@ -28,8 +34,8 @@ public class Player extends Mob {
     private int animTimer = 0;
 
     public Player(double startX, double startY, int[][] mapHash) {
-        // Đã bỏ lives, truyền: x, y, w, h, speed, power, bombLimit, hp, attackPower
-        super(startX, startY, 32, 32, 2, 1, 1, 3, 1);
+        // Truyền width và height là PLAYER_WIDTH và PLAYER_HEIGHT vào constructor của Mob
+        super(startX, startY, PLAYER_WIDTH, PLAYER_HEIGHT, 2, 1, 1, 3, 1);
         this.mapHash = mapHash;
         loadImages();
     }
@@ -59,7 +65,8 @@ public class Player extends Mob {
         }
 
         if (currentImg != null) {
-            g2d.drawImage(currentImg, (int) x, (int) y, null);
+            // Vẽ ảnh co dãn theo kích thước width, height của player (có thể căn chỉnh thêm offset nếu muốn ảnh nằm chính giữa ô)
+            g2d.drawImage(currentImg, (int) x, (int) y, width, height, null);
         } else {
             g2d.setColor(java.awt.Color.RED);
             g2d.fillRect((int) x, (int) y, width, height);
@@ -97,10 +104,12 @@ public class Player extends Mob {
 
     private boolean isValidPosition(double nextX, double nextY) {
         if (mapHash == null) return true;
+
+        // Sử dụng width và height thay vì cố định TILE_SIZE để kiểm tra chính xác vùng va chạm nhỏ hơn
         int leftTile = (int) (nextX / TILE_SIZE);
-        int rightTile = (int) ((nextX + TILE_SIZE - 1) / TILE_SIZE);
+        int rightTile = (int) ((nextX + width - 1) / TILE_SIZE);
         int topTile = (int) (nextY / TILE_SIZE);
-        int bottomTile = (int) ((nextY + TILE_SIZE - 1) / TILE_SIZE);
+        int bottomTile = (int) ((nextY + height - 1) / TILE_SIZE);
 
         try {
             return isWalkable(mapHash[topTile][leftTile]) &&
@@ -113,8 +122,8 @@ public class Player extends Mob {
     }
 
     private boolean isWalkable(int tileValue) {
-        // Cho phép đi qua đường đi (0) và khi dat qua bom ra thi co the di ra duoc
-        return tileValue == 0 || tileValue == 5;
+        // Cho phép đi qua đường đi (0) và các ô trống khác phù hợp
+        return tileValue != 1 && tileValue != 2 && tileValue != 4;
     }
 
     @Override
@@ -129,8 +138,32 @@ public class Player extends Mob {
         if (goLeft)  { nextX -= speed; isMoving = true; currentDirection = Direction.LEFT; }
         if (goRight) { nextX += speed; isMoving = true; currentDirection = Direction.RIGHT; }
 
-        if (isValidPosition(nextX, y)) x = nextX;
-        if (isValidPosition(x, nextY)) y = nextY;
+        // --- Cải tiến phần kiểm tra và trượt góc (Corner Sliding) ---
+        if (goLeft || goRight) {
+            if (isValidPosition(nextX, y)) {
+                x = nextX;
+            } else {
+                double alignSpeed = speed;
+                if (isValidPosition(nextX, y - alignSpeed)) {
+                    y -= alignSpeed;
+                } else if (isValidPosition(nextX, y + alignSpeed)) {
+                    y += alignSpeed;
+                }
+            }
+        }
+
+        if (goUp || goDown) {
+            if (isValidPosition(x, nextY)) {
+                y = nextY;
+            } else {
+                double alignSpeed = speed;
+                if (isValidPosition(x - alignSpeed, nextY)) {
+                    x -= alignSpeed;
+                } else if (isValidPosition(x + alignSpeed, nextY)) {
+                    x += alignSpeed;
+                }
+            }
+        }
 
         if (isMoving) {
             animTimer++;
