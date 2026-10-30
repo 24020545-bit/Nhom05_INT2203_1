@@ -89,7 +89,7 @@ public class Bomb {
             }
 
             fuseTimer++;
-            if (fuseTimer >= 150) {
+            if (fuseTimer >= 70) {
                 explode();
             }
         } else {

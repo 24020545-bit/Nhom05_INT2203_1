@@ -7,9 +7,7 @@ import utils.Direction;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Image;
-import java.awt.Rectangle;
 import java.awt.event.KeyEvent;
-import java.util.ArrayList;
 import java.util.List;
 import javax.swing.ImageIcon;
 
@@ -18,12 +16,11 @@ public class Player extends Mob {
     private int[][] mapHash;
     private final int TILE_SIZE = 32;
 
-    // Đặt kích thước nhỏ hơn TILE_SIZE (ví dụ 24x24) để khớp với ảnh và di chuyển mượt mà không bị vướng khoảng trống
+    // Kích thước nhỏ hơn TILE_SIZE để khớp với ảnh và di chuyển mượt mà
     private static final int PLAYER_WIDTH = 24;
     private static final int PLAYER_HEIGHT = 32;
 
-    private List<Bomb> activeBombs = new ArrayList<>();
-    private int bombLimit = 1;
+    private int bombLimit = 1; // Giới hạn số bom được đặt cùng lúc
 
     private Image[] downImgs = new Image[4];
     private Image[] upImgs = new Image[4];
@@ -34,7 +31,6 @@ public class Player extends Mob {
     private int animTimer = 0;
 
     public Player(double startX, double startY, int[][] mapHash) {
-        // Truyền width và height là PLAYER_WIDTH và PLAYER_HEIGHT vào constructor của Mob
         super(startX, startY, PLAYER_WIDTH, PLAYER_HEIGHT, 2, 1, 1, 3, 1);
         this.mapHash = mapHash;
         loadImages();
@@ -65,7 +61,6 @@ public class Player extends Mob {
         }
 
         if (currentImg != null) {
-            // Vẽ ảnh co dãn theo kích thước width, height của player (có thể căn chỉnh thêm offset nếu muốn ảnh nằm chính giữa ô)
             g2d.drawImage(currentImg, (int) x, (int) y, width, height, null);
         } else {
             g2d.setColor(java.awt.Color.RED);
@@ -79,14 +74,15 @@ public class Player extends Mob {
         }
     }
 
-    public void handleKeyPressed(KeyEvent e) {
+    // Nhận thêm tham số globalBombs từ GamePanel để xử lý phím Space
+    public void handleKeyPressed(KeyEvent e, List<Bomb> globalBombs) {
         int key = e.getKeyCode();
         if (key == KeyEvent.VK_W || key == KeyEvent.VK_UP)    { goUp = true; currentDirection = Direction.UP; }
         if (key == KeyEvent.VK_S || key == KeyEvent.VK_DOWN)  { goDown = true; currentDirection = Direction.DOWN; }
         if (key == KeyEvent.VK_A || key == KeyEvent.VK_LEFT)  { goLeft = true; currentDirection = Direction.LEFT; }
         if (key == KeyEvent.VK_D || key == KeyEvent.VK_RIGHT) { goRight = true; currentDirection = Direction.RIGHT; }
         if (key == KeyEvent.VK_SPACE) {
-            dropBomb(mapHash, activeBombs);
+            dropBomb(mapHash, globalBombs);
         }
     }
 
@@ -105,7 +101,6 @@ public class Player extends Mob {
     private boolean isValidPosition(double nextX, double nextY) {
         if (mapHash == null) return true;
 
-        // Sử dụng width và height thay vì cố định TILE_SIZE để kiểm tra chính xác vùng va chạm nhỏ hơn
         int leftTile = (int) (nextX / TILE_SIZE);
         int rightTile = (int) ((nextX + width - 1) / TILE_SIZE);
         int topTile = (int) (nextY / TILE_SIZE);
@@ -122,7 +117,6 @@ public class Player extends Mob {
     }
 
     private boolean isWalkable(int tileValue) {
-        // Cho phép đi qua đường đi (0) và các ô trống khác phù hợp
         return tileValue != 1 && tileValue != 2 && tileValue != 4;
     }
 
@@ -138,7 +132,6 @@ public class Player extends Mob {
         if (goLeft)  { nextX -= speed; isMoving = true; currentDirection = Direction.LEFT; }
         if (goRight) { nextX += speed; isMoving = true; currentDirection = Direction.RIGHT; }
 
-        // --- Cải tiến phần kiểm tra và trượt góc (Corner Sliding) ---
         if (goLeft || goRight) {
             if (isValidPosition(nextX, y)) {
                 x = nextX;
@@ -175,10 +168,17 @@ public class Player extends Mob {
     }
 
     public void dropBomb(int[][] mapHash, List<Bomb> globalBombList) {
-        activeBombs.removeIf(b -> !b.isActive());
-        if (activeBombs.size() < bombLimit) {
-            Bomb newBomb = new Bomb(this.x, this.y, mapHash, this.power, this.attackPower);
-            activeBombs.add(newBomb);
+        // Đếm số lượng bom đang hoạt động trong danh sách toàn cục của GamePanel
+        long activeCount = globalBombList.stream()
+                .filter(Bomb::isActive)
+                .count();
+
+        if (activeCount < bombLimit) {
+            // Căn chỉnh tọa độ bom vào chính giữa ô lưới (Tile) chuẩn Bomberman
+            int bombX = (int) ((x + width / 2.0) / TILE_SIZE) * TILE_SIZE;
+            int bombY = (int) ((y + height / 2.0) / TILE_SIZE) * TILE_SIZE;
+
+            Bomb newBomb = new Bomb(bombX, bombY, mapHash, this.power, this.attackPower);
             globalBombList.add(newBomb);
         }
     }

@@ -1,4 +1,3 @@
-
 import entity.Player;
 import entity.bot.DollBot;
 import entity.bot.KondoriaBot;
@@ -37,7 +36,7 @@ public class GamePanel extends JPanel {
         player = new Player(TILE_SIZE, TILE_SIZE, gameMap.getGrid());
         Mobs.add(player);
 
-        // 3. Khởi tạo danh sách bom
+        // 3. Khởi tạo danh sách bom (GamePanel quản lý toàn cục)
         activeBombs = new ArrayList<>();
 
         // 4. Khởi tạo Bot
@@ -75,12 +74,12 @@ public class GamePanel extends JPanel {
                 gameMap.getGrid()
         ));
 
-        // 6. Xử lý bàn phím
+        // 6. Xử lý bàn phím (Truyền danh sách activeBombs toàn cục vào Player)
         addKeyListener(new KeyAdapter() {
 
             @Override
             public void keyPressed(KeyEvent e) {
-                player.handleKeyPressed(e);
+                player.handleKeyPressed(e, activeBombs);
             }
 
             @Override
@@ -112,11 +111,9 @@ public class GamePanel extends JPanel {
                 m -> !m.isSurvival() && !(m instanceof Player)
         );
 
-        // Cập nhật bom
+        // Cập nhật bom toàn cục
         for (int i = activeBombs.size() - 1; i >= 0; i--) {
-
             Bomb bomb = activeBombs.get(i);
-
             bomb.update();
 
             if (!bomb.isActive()) {
@@ -184,7 +181,7 @@ public class GamePanel extends JPanel {
         // 1. Vẽ bản đồ
         drawMap(g2d);
 
-        // 2. Vẽ bom và hiệu ứng nổ
+        // 2. Vẽ bom và hiệu ứng nổ (GamePanel quản lý danh sách activeBombs)
         for (Bomb bomb : activeBombs) {
             bomb.draw(g2d);
         }
