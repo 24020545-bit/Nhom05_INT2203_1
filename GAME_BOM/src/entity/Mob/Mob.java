@@ -1,4 +1,4 @@
-package entity;
+package entity.Mob;
 
 import map.GameMap;
 import manager.BombManager;

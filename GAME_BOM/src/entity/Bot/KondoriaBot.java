@@ -1,6 +1,8 @@
-package entity;
+package entity.Bot;
 
 
+import entity.Mob.Mob;
+import entity.Player;
 import map.GameMap;
 import manager.BombManager;
 import utils.Direction;

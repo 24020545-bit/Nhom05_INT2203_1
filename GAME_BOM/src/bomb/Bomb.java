@@ -1,7 +1,7 @@
 package bomb;
 
 import map.GameMap;
-import entity.Mob;
+import entity.Mob.Mob;
 import manager.BombManager;
 
 import java.awt.*;

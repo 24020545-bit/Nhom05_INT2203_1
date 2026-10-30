@@ -1,7 +1,7 @@
-package entity;
+package entity.Bot;
 
 
-import entity.Mob;
+import entity.Mob.Mob;
 import map.GameMap;
 import manager.BombManager;
 import utils.Direction;
