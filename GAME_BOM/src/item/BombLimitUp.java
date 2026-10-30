@@ -1,6 +1,7 @@
 package item;
 
-import entity.Mod;
+import entity.Mob.Mob;
+
 
 import java.awt.*;
 
@@ -8,7 +9,7 @@ public class BombLimitUp extends Items {
     public BombLimitUp(int x, int y) { super(x, y); }
 
     @Override
-    public void applyEffect(Mod target) {
+    public void applyEffect(Mob target) {
         if (target != null && target.isAlive()) {
             target.setBombLimit(target.getBombLimit() + 1);
             this.isCollected = true;
