@@ -1,6 +1,5 @@
 package item;
 
-
 import entity.Player;
 import entity.mob.Mob;
 import entity.mob.Mobs;
@@ -8,16 +7,18 @@ import utils.Direction;
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.Image;
+import java.net.URL;
 import javax.swing.ImageIcon;
 
 public class Item extends Mob {
 
-    // Định nghĩa 4 loại vật phẩm theo yêu cầu
+    // Định nghĩa các loại vật phẩm
     public enum ItemType {
-        DAMAGE_UP(6),  // Gán mã số 6 trên mapHash cho item Tăng sát thương
-        SPEED_UP(7),   // Gán mã số 7 trên mapHash cho item Tăng tốc độ
-        RANGE_UP(8),   // Gán mã số 8 trên mapHash cho item Tăng phạm vi bom
-        HEAL(9);       // Gán mã số 9 trên mapHash cho item Hồi máu
+        DAMAGE_UP(6),  // Tăng sát thương (mã 6)
+        SPEED_UP(7),   // Tăng tốc độ (mã 7)
+        RANGE_UP(8),   // Tăng phạm vi bom (mã 8)
+        HEAL(9),       // Hồi máu (mã 9)
+        BOMB_UP(10);   // Tăng số lượng bom tối đa (mã 10)
 
         private final int mapValue;
 
@@ -30,10 +31,9 @@ public class Item extends Mob {
         }
     }
 
-    private ItemType type;
+    private final ItemType type;
     private Image itemImage;
-    private final int TILE_SIZE = 32;
-    private int[][] mapHash;
+    private final int[][] mapHash;
 
     public Item(double x, double y, ItemType type, int[][] mapHash) {
         super(x, y, 32, 32, 0, 0, 0, 0, 0);
@@ -42,27 +42,28 @@ public class Item extends Mob {
         this.survival = true;
 
         loadItemImage();
-        // Đánh dấu lên mapHash bằng đúng giá trị riêng của từng loại item
         updateMapHash(type.getMapValue());
     }
 
     private void loadItemImage() {
+        String path = switch (type) {
+            case DAMAGE_UP -> "/ItemImage/item_damage.png";
+            case SPEED_UP  -> "/ItemImage/item_speed.png";
+            case RANGE_UP  -> "/ItemImage/item_range.png";
+            case HEAL      -> "/ItemImage/item_heal.png";
+            case BOMB_UP   -> "/ItemImage/item_bomb.png";
+        };
+
         try {
-            switch (type) {
-                case DAMAGE_UP:
-                    itemImage = new ImageIcon(getClass().getResource("/ItemImage/item_damage.png")).getImage();
-                    break;
-                case SPEED_UP:
-                    itemImage = new ImageIcon(getClass().getResource("/ItemImage/item_speed.png")).getImage();
-                    break;
-                case RANGE_UP:
-                    itemImage = new ImageIcon(getClass().getResource("/ItemImage/item_range.png")).getImage();
-                    break;
-                case HEAL:
-                    itemImage = new ImageIcon(getClass().getResource("/ItemImage/item_heal.png")).getImage();
-                    break;
+            URL imgUrl = getClass().getResource(path);
+            if (imgUrl != null) {
+                itemImage = new ImageIcon(imgUrl).getImage();
+            } else {
+                System.err.println("Không tìm thấy tệp ảnh item: " + path);
+                itemImage = null;
             }
         } catch (Exception e) {
+            System.err.println("Lỗi khi tải ảnh item " + path + ": " + e.getMessage());
             itemImage = null;
         }
     }
@@ -76,7 +77,7 @@ public class Item extends Mob {
                 if (this.getBounds().intersects(mob.getBounds())) {
                     applyEffect((Player) mob);
                     this.survival = false;
-                    updateMapHash(0); // Khi nhặt xong, xóa khỏi mapHash (trả về 0)
+                    updateMapHash(0); // Nhặt xong xóa khỏi mapHash
                 }
             }
         }
@@ -98,6 +99,9 @@ public class Item extends Mob {
             case HEAL:
                 player.heal(1);
                 break;
+            case BOMB_UP:
+                player.setBombLimit(player.getBombLimit() + 1);
+                break;
         }
     }
 
@@ -113,6 +117,7 @@ public class Item extends Mob {
                 case SPEED_UP:  g2d.setColor(Color.BLUE); break;
                 case RANGE_UP:  g2d.setColor(Color.ORANGE); break;
                 case HEAL:      g2d.setColor(Color.GREEN); break;
+                case BOMB_UP:   g2d.setColor(Color.MAGENTA); break;
             }
             g2d.fillRect((int) x, (int) y, width, height);
             g2d.setColor(Color.BLACK);
@@ -126,17 +131,17 @@ public class Item extends Mob {
     }
 
     private void updateMapHash(int value) {
+        final int tileSize = 32;
         try {
-            int j = (int) (x / TILE_SIZE);
-            int i = (int) (y / TILE_SIZE);
+            int j = (int) (x / tileSize);
+            int i = (int) (y / tileSize);
             if (mapHash != null && i >= 0 && i < mapHash.length && j >= 0 && j < mapHash[0].length) {
-                // Nếu giá trị cần set là 0 (xóa), hoặc ô đó đang đúng là mã của item này thì mới cập nhật
                 if (value == 0 || mapHash[i][j] == 0 || mapHash[i][j] == type.getMapValue()) {
                     mapHash[i][j] = value;
                 }
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            System.err.println("Lỗi cập nhật mapHash cho item: " + e.getMessage());
         }
     }
 }

@@ -73,11 +73,9 @@ public abstract class Mob {
     public int getMaxHp() { return maxHp; }
     public int getAttackPower() { return attackPower; }
     public void setAttackPower(int attackPower) { this.attackPower = attackPower; }
-
     public Rectangle getBounds() {
         return new Rectangle((int) x, (int) y, width, height);
     }
-
     public double getX() { return x; }
     public double getY() { return y; }
     public void setLocation(double x, double y) { this.x = x; this.y = y; }
@@ -89,6 +87,12 @@ public abstract class Mob {
     public void setSpeed(int speed) { this.speed = speed; }
     public int getPower() { return power; }
     public void setPower(int power) { this.power = power; }
+    public int getBombLimit() {
+        return bombLimit;
+    }
+    public void setBombLimit(int bombLimit) {
+        this.bombLimit = bombLimit;
+    }
     public Direction getCurrentDirection() { return currentDirection; }
     public void setCurrentDirection(Direction currentDirection) { this.currentDirection = currentDirection; }
 }
