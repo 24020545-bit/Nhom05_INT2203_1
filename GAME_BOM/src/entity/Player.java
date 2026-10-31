@@ -88,7 +88,7 @@ public class Player extends Mob {
             var dead2 = getClass().getResource("/PlayerImage/dead2.png");
             var dead3 = getClass().getResource("/PlayerImage/dead3.png");
             deads[0] = (dead1 != null) ? new ImageIcon(dead1).getImage() : null;
-            deads[1] = (dead2 != null) ? new ImageIcon(dead2).getImage() : null; // Giữ nguyên an toàn
+            deads[1] = (dead2 != null) ? new ImageIcon(dead2).getImage() : null;
             deads[2] = (dead3 != null) ? new ImageIcon(dead3).getImage() : null;
 
         } catch (Exception e) {
@@ -137,9 +137,10 @@ public class Player extends Mob {
         g2d.setColor(new Color(100, 0, 0));
         g2d.fillRect(barX, barY, barWidth, barHeight);
 
-        // Máu hiện tại (màu xanh lá)
-        // Giả sử HP tối đa là 3, tính tỷ lệ máu
-        int maxHp = 3;
+        // Máu hiện tại (màu xanh lá) - Sửa lại lấy maxHp động thay vì cố định số 3
+        int maxHp = getMaxHp(); // Hoặc lấy biến lưu trữ tổng máu tối đa của bạn
+        if (maxHp <= 0) maxHp = 1; // Tránh lỗi chia cho 0
+
         double hpPercent = (double) Math.max(0, hp) / maxHp;
         int currentHpWidth = (int) (barWidth * hpPercent);
 

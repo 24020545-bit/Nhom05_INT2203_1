@@ -89,7 +89,7 @@ public class Item {
                 if (player.getSpeed() < 4) player.setSpeed(player.getSpeed() + 1);
             }
             case RANGE_UP  -> player.setPower(player.getPower() + 1);
-            case HEAL      -> player.heal(1);
+            case HEAL      -> player.heal((int)(player.getMaxHp()*0.5));
             case BOMB_UP   -> player.setBombLimit(player.getBombLimit() + 1);
         }
     }
