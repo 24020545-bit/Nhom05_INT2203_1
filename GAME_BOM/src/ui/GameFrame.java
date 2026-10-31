@@ -4,6 +4,7 @@ import ui.screen.*;
 
 import javax.swing.*;
 import java.awt.*;
+import java.util.Properties;
 
 public class GameFrame extends JFrame {
     private final CardLayout cardLayout;
@@ -42,12 +43,24 @@ public class GameFrame extends JFrame {
     }
 
     public void showScreen(String name) {
+        // Nếu quay trở về màn hình chọn cửa ải, tiến hành vẽ lại (refresh) trạng thái các nút mở khóa
+        if (name.equals("LEVEL_SELECT")) {
+            levelSelectScreen.buildLevelButtons();
+        }
         cardLayout.show(containerPanel, name);
     }
 
     public void startLevel(int levelIndex) {
-        // Tạo màn chơi GamePanel dựa theo level được chọn
+        // Tạo màn chơi GamePanel mới từ đầu dựa theo level được chọn
         GamePanel gamePanel = new GamePanel(this, levelIndex);
+        containerPanel.add(gamePanel, "GAME_PLAY_" + levelIndex);
+        cardLayout.show(containerPanel, "GAME_PLAY_" + levelIndex);
+        gamePanel.requestFocusInWindow();
+    }
+
+    // Bổ sung phương thức hỗ trợ khởi tạo màn chơi khôi phục từ file save dở
+    public void startLevelWithSave(int levelIndex, Properties saveProps) {
+        GamePanel gamePanel = new GamePanel(this, levelIndex, saveProps);
         containerPanel.add(gamePanel, "GAME_PLAY_" + levelIndex);
         cardLayout.show(containerPanel, "GAME_PLAY_" + levelIndex);
         gamePanel.requestFocusInWindow();

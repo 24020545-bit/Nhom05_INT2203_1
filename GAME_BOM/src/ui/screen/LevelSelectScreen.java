@@ -5,9 +5,10 @@ import utils.SaveManager;
 
 import javax.swing.*;
 import java.awt.*;
+import java.util.Properties;
 
 public class LevelSelectScreen extends JPanel {
-    private static final int TOTAL_LEVELS = 6; // Tổng số cửa ải trong game
+    private static final int TOTAL_LEVELS = 6;
     private static int unlockedLevel = 1;
 
     private final JPanel gridPanel;
@@ -24,7 +25,6 @@ public class LevelSelectScreen extends JPanel {
         title.setBorder(BorderFactory.createEmptyBorder(20, 0, 10, 0));
         add(title, BorderLayout.NORTH);
 
-        // Chia lưới 2 hàng, 3 cột để hiển thị các cửa ải gọn gàng
         gridPanel = new JPanel(new GridLayout(2, 3, 20, 20));
         gridPanel.setOpaque(false);
         gridPanel.setBorder(BorderFactory.createEmptyBorder(30, 80, 30, 80));
@@ -43,7 +43,6 @@ public class LevelSelectScreen extends JPanel {
         add(bottom, BorderLayout.SOUTH);
     }
 
-    // Hàm xây dựng và vẽ lại trạng thái các nút cửa ải dựa vào unlockedLevel hiện tại
     public void buildLevelButtons() {
         gridPanel.removeAll();
 
@@ -53,14 +52,13 @@ public class LevelSelectScreen extends JPanel {
             levelBtn.setFont(new Font("Arial", Font.BOLD, 16));
             levelBtn.setFocusPainted(false);
 
-            // Kiểm tra trạng thái mở khóa
             if (i <= unlockedLevel) {
-                levelBtn.setBackground(new Color(60, 179, 113)); // Xanh lá: Đã mở
+                levelBtn.setBackground(new Color(60, 179, 113));
                 levelBtn.setForeground(Color.WHITE);
                 levelBtn.setEnabled(true);
-                levelBtn.addActionListener(e -> parentFrame.startLevel(levelId));
+                levelBtn.addActionListener(e -> handleLevelClick(levelId));
             } else {
-                levelBtn.setBackground(new Color(128, 128, 128)); // Xám: Bị khóa
+                levelBtn.setBackground(new Color(128, 128, 128));
                 levelBtn.setForeground(Color.LIGHT_GRAY);
                 levelBtn.setEnabled(false);
                 levelBtn.setText("🔒 Cửa ải " + i);
@@ -73,6 +71,41 @@ public class LevelSelectScreen extends JPanel {
         gridPanel.repaint();
     }
 
+    private void handleLevelClick(int levelId) {
+        Properties saveProps = SaveManager.loadGameProgress();
+
+        if (saveProps != null) {
+            int savedLevel = Integer.parseInt(saveProps.getProperty("currentLevel", "0"));
+
+            if (savedLevel == levelId) {
+                String[] options = {"Chơi tiếp (Dở trận)", "Chơi lại từ đầu", "Hủy"};
+                int choice = JOptionPane.showOptionDialog(
+                        this,
+                        "Bạn đang có tiến trình chơi dở ở Cửa ải " + levelId + ". Bạn muốn tiếp tục hay chơi lại từ đầu?",
+                        "Tùy chọn chơi",
+                        JOptionPane.DEFAULT_OPTION,
+                        JOptionPane.QUESTION_MESSAGE,
+                        null,
+                        options,
+                        options[0]
+                );
+
+                if (choice == 0) {
+                    parentFrame.startLevelWithSave(levelId, saveProps);
+                    return;
+                } else if (choice == 1) {
+                    SaveManager.clearSaveFile();
+                    parentFrame.startLevel(levelId);
+                    return;
+                } else {
+                    return;
+                }
+            }
+        }
+
+        parentFrame.startLevel(levelId);
+    }
+
     public static void setUnlockedLevel(int level) {
         unlockedLevel = level;
     }
@@ -80,7 +113,6 @@ public class LevelSelectScreen extends JPanel {
     public static void unlockNextLevel(int completedLevel) {
         if (completedLevel >= unlockedLevel && completedLevel < TOTAL_LEVELS) {
             unlockedLevel = completedLevel + 1;
-            // Tự động lưu game ngay khi mở khóa màn mới vào file save.properties
             SaveManager.saveGame(unlockedLevel);
         }
     }

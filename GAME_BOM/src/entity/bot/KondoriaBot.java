@@ -8,14 +8,14 @@ import java.awt.Graphics2D;
 import java.awt.Color;
 
 public class KondoriaBot extends Mob {
-    private final Player targetPlayer;
-    private final int[][] mapHash;
+    private Player targetPlayer;
+    private int[][] mapHash;
     private final int TILE_SIZE = 32;
     private double moveHori = 0;
     private double moveVerti = 0;
 
     // Bán kính phát hiện Player (tính bằng số ô/tile). Ví dụ: 5 ô
-    private static final int CHASE_RADIUS = 5;
+    private static final int CHASE_RADIUS = 4;
 
     public KondoriaBot(double x, double y, int width, int height, int speed, Player targetPlayer, int[][] mapHash) {
         super(x, y, width, height, speed, 0, 0, 10, 1);
@@ -39,14 +39,23 @@ public class KondoriaBot extends Mob {
         int jp = (int) ((targetPlayer.getX() + targetPlayer.getWidth() / 2.0) / TILE_SIZE);
         int ip = (int) ((targetPlayer.getY() + targetPlayer.getHeight() / 2.0) / TILE_SIZE);
 
-        // Kiểm tra khoảng cách theo bán kính (CHASE_RADIUS)
+        // Kiểm tra phạm vi (CHASE_RADIUS)
         int distanceX = Math.abs(jp - j);
         int distanceY = Math.abs(ip - i);
-
-        // Nếu Player ngoài bán kính, Bot dừng lại nhưng KHÔNG dùng return để tránh kẹt trạng thái
         boolean isPlayerInRange = (distanceX <= CHASE_RADIUS && distanceY <= CHASE_RADIUS);
 
         if (isPlayerInRange) {
+            // NẾU VỪA LOAD SAVE HOẶC VỪA VÀO TẦM (move đang bằng 0), KÍCH HOẠT HƯỚNG NGAY LẬP TỨC
+            if (moveHori == 0 && moveVerti == 0) {
+                if (jp != j) {
+                    moveHori = (jp < j) ? -speed : speed;
+                    currentDirection = (jp < j) ? Direction.LEFT : Direction.RIGHT;
+                } else if (ip != i) {
+                    moveVerti = (ip < i) ? -speed : speed;
+                    currentDirection = (ip < i) ? Direction.UP : Direction.DOWN;
+                }
+            }
+
             // Khi bot dịch chuyển đến đúng tâm ô lưới, tiến hành tính toán hướng di chuyển trực diện về phía Player
             if (Math.abs(j * TILE_SIZE - x) < speed && Math.abs(i * TILE_SIZE - y) < speed) {
                 x = j * TILE_SIZE;
@@ -55,14 +64,24 @@ public class KondoriaBot extends Mob {
                 moveHori = 0;
                 moveVerti = 0;
 
-                if (jp != j) {
-                    moveHori = (jp < j) ? -speed : speed;
-                    currentDirection = (jp < j) ? Direction.LEFT : Direction.RIGHT;
+                if (jp == j) {
+                    moveHori = 0;
+                } else if (jp < j) {
+                    moveHori = -speed;
+                    currentDirection = Direction.LEFT;
+                } else {
+                    moveHori = speed;
+                    currentDirection = Direction.RIGHT;
                 }
 
-                if (ip != i) {
-                    moveVerti = (ip < i) ? -speed : speed;
-                    currentDirection = (ip < i) ? Direction.UP : Direction.DOWN;
+                if (ip == i) {
+                    moveVerti = 0;
+                } else if (ip < i) {
+                    moveVerti = -speed;
+                    currentDirection = Direction.UP;
+                } else {
+                    moveVerti = speed;
+                    currentDirection = Direction.DOWN;
                 }
 
                 // Nếu di chuyển cả ngang và dọc, ưu tiên hướng có khoảng cách lớn hơn
@@ -75,7 +94,7 @@ public class KondoriaBot extends Mob {
                 }
             }
         } else {
-            // Nếu người chơi ở ngoài tầm nhìn, từ từ dừng bot lại
+            // Nếu người chơi ở ngoài phạm vi, bot dừng lại và reset vận tốc
             moveHori = 0;
             moveVerti = 0;
         }
@@ -83,11 +102,12 @@ public class KondoriaBot extends Mob {
         double nextX = x + moveHori;
         double nextY = y + moveVerti;
 
-        // Kiểm tra vị trí hợp lệ
+        // Kiểm tra vị trí hợp lệ: Không được đi ra ngoài biên map
         if (isValidPosition(nextX, nextY)) {
             x = nextX;
             y = nextY;
         } else {
+            // Nếu đụng biên map, dừng hướng di chuyển đó lại
             moveHori = 0;
             moveVerti = 0;
         }
@@ -113,7 +133,17 @@ public class KondoriaBot extends Mob {
         int topTile = (int) (nextY / TILE_SIZE);
         int bottomTile = (int) ((nextY + height - 1) / TILE_SIZE);
 
-        return topTile >= 0 && bottomTile < mapHash.length && leftTile >= 0 && rightTile < mapHash[0].length;
+        try {
+            // Kiểm tra xem có vượt ra ngoài biên mảng map không
+            if (topTile < 0 || bottomTile >= mapHash.length || leftTile < 0 || rightTile >= mapHash[0].length) {
+                return false; // Chặn không cho ra khỏi map
+            }
+
+            // Kondoria đi xuyên qua mọi vật thể/tường trong map, chỉ chặn khi ra ngoài biên map
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     @Override

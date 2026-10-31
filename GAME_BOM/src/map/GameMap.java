@@ -14,6 +14,7 @@ public class GameMap {
     public static final int WALL_SOLID = 2;
 
     private final List<int[][]> mapList;
+    private int[][] currentGrid; // Lưới bản đồ đang được sử dụng cho màn chơi hiện tại
 
     public GameMap() {
         mapList = new ArrayList<>();
@@ -30,6 +31,11 @@ public class GameMap {
             };
 
             mapList.add(parseStringToMap(defaultMap));
+        }
+
+        // Mặc định gán grid đầu tiên cho bản đồ hiện tại
+        if (!mapList.isEmpty()) {
+            this.currentGrid = mapList.get(0);
         }
     }
 
@@ -105,11 +111,12 @@ public class GameMap {
     }
 
     public int[][] getGrid() {
+        if (currentGrid != null) {
+            return currentGrid;
+        }
         if (mapList.isEmpty()) {
             return new int[0][0];
         }
-
-        // Mặc định trả về bản đồ đầu tiên trong danh sách
         return mapList.getFirst();
     }
 
@@ -120,5 +127,10 @@ public class GameMap {
 
     public int getHeight() {
         return getGrid().length;
+    }
+
+    // Phương thức gán trực tiếp mảng grid khi load game save dở
+    public void setGrid(int[][] loadedGrid) {
+        this.currentGrid = loadedGrid;
     }
 }

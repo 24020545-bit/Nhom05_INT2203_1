@@ -77,7 +77,9 @@ public abstract class Mob {
         return new Rectangle((int) x, (int) y, width, height);
     }
     public double getX() { return x; }
+    public void setX(double x) { this.x = x; } // <-- Thêm hàm này
     public double getY() { return y; }
+    public void setY(double y) { this.y = y; } // <-- Thêm hàm này
     public void setLocation(double x, double y) { this.x = x; this.y = y; }
     public int getWidth() { return width; }
     public int getHeight() { return height; }

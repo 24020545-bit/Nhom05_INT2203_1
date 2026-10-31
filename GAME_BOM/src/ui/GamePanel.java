@@ -9,7 +9,7 @@ import bomb.Bomb;
 import item.Item;
 import map.GameMap;
 import ui.screen.LevelSelectScreen;
-
+import utils.SaveManager;
 
 import javax.swing.*;
 import java.awt.*;
@@ -17,6 +17,7 @@ import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Properties;
 
 public class GamePanel extends JPanel {
 
@@ -28,9 +29,16 @@ public class GamePanel extends JPanel {
     private Player player;
     private List<Bomb> activeBombs;
     private Timer gameTimer;
-    private boolean isLevelCompleted = false; // Cờ hiệu tránh lặp sự kiện kết thúc màn
+    private boolean isLevelCompleted = false;
 
+    // 1. Constructor cho chơi mới từ đầu
     public GamePanel(GameFrame parentFrame, int levelIndex) {
+        this(parentFrame, levelIndex, null);
+    }
+
+    // 2. Constructor hỗ trợ khôi phục từ file save dở
+    // Constructor hỗ trợ khôi phục toàn diện từ file save dở
+    public GamePanel(GameFrame parentFrame, int levelIndex, Properties saveProps) {
         this.parentFrame = parentFrame;
         this.currentLevel = levelIndex;
 
@@ -38,35 +46,77 @@ public class GamePanel extends JPanel {
         setBackground(Color.DARK_GRAY);
         setPreferredSize(new Dimension(800, 600));
 
-        // Xóa danh sách mob cũ trước khi vào màn mới
         Mobs.MOBS.clear();
-
-        // 1. Khởi tạo bản đồ
         gameMap = new GameMap();
-
-        // 2. Khởi tạo Player
-        player = new Player(TILE_SIZE, TILE_SIZE, gameMap.getGrid());
-        Mobs.add(player);
-
-        // 3. Khởi tạo danh sách bom toàn cục
         activeBombs = new ArrayList<>();
 
-        // 4. Khởi tạo Bot tùy theo cấp độ (Càng cao càng nhiều bot)
-        Mobs.add(new DollBot(5 * TILE_SIZE, 3 * TILE_SIZE, TILE_SIZE, TILE_SIZE, 1, gameMap.getGrid()));
-        if (levelIndex >= 2) {
-            Mobs.add(new KondoriaBot(7 * TILE_SIZE, 3 * TILE_SIZE, TILE_SIZE, TILE_SIZE, 1, player, gameMap.getGrid()));
+        // 1. NẾU CÓ FILE SAVE DỞ -> KHÔI PHỤC MAP, PLAYER VÀ BOT
+        if (saveProps != null) {
+            try {
+                // Khôi phục Map Grid
+                String gridStr = saveProps.getProperty("mapGrid");
+                if (gridStr != null && !gridStr.isEmpty()) {
+                    String[] parts = gridStr.split(",");
+                    int height = gameMap.getHeight();
+                    int width = gameMap.getWidth();
+                    int[][] loadedGrid = new int[height][width];
+                    int index = 0;
+                    for (int y = 0; y < height; y++) {
+                        for (int x = 0; x < width; x++) {
+                            if (index < parts.length) {
+                                loadedGrid[y][x] = Integer.parseInt(parts[index++]);
+                            }
+                        }
+                    }
+                    gameMap.setGrid(loadedGrid);
+                }
+
+                // Khôi phục Player
+                player = new Player(TILE_SIZE, TILE_SIZE, gameMap.getGrid());
+                player.setX(Double.parseDouble(saveProps.getProperty("playerX", String.valueOf(TILE_SIZE))));
+                player.setY(Double.parseDouble(saveProps.getProperty("playerY", String.valueOf(TILE_SIZE))));
+                // player.setHp(Integer.parseInt(saveProps.getProperty("playerHp", "1")));
+                Mobs.add(player);
+
+                // Khôi phục danh sách Bot đã lưu
+                int botCount = Integer.parseInt(saveProps.getProperty("botCount", "0"));
+                for (int i = 0; i < botCount; i++) {
+                    String type = saveProps.getProperty("bot_" + i + "_type");
+                    double bx = Double.parseDouble(saveProps.getProperty("bot_" + i + "_x"));
+                    double by = Double.parseDouble(saveProps.getProperty("bot_" + i + "_y"));
+                    int bhp = Integer.parseInt(saveProps.getProperty("bot_" + i + "_hp"));
+
+                    if (type != null && type.contains("DollBot")) {
+                        DollBot bot = new DollBot(bx, by, TILE_SIZE, TILE_SIZE, 1, gameMap.getGrid());
+                        bot.setHp(bhp);
+                        Mobs.add(bot);
+                    } else if (type != null && type.contains("KondoriaBot")) {
+                        KondoriaBot bot = new KondoriaBot(bx, by, TILE_SIZE, TILE_SIZE, 1, player, gameMap.getGrid());
+                        bot.setHp(bhp);
+                        Mobs.add(bot);
+                    }
+                }
+                System.out.println("Đã khôi phục thành công toàn bộ trạng thái game dở!");
+
+            } catch (Exception e) {
+                System.err.println("Lỗi khôi phục trạng thái game dở: " + e.getMessage());
+                // Fallback nếu lỗi: Khởi tạo mới hoàn toàn
+                initDefaultGame(levelIndex);
+            }
+        } else {
+            // 2. KHỞI TẠO MỚI HOÀN TOÀN NẾU KHÔNG CÓ SAVE
+            initDefaultGame(levelIndex);
         }
 
-        // 5. Khởi tạo Item
-        Mobs.add(new Item(3 * TILE_SIZE, TILE_SIZE, Item.ItemType.RANGE_UP, gameMap.getGrid()));
-        Mobs.add(new Item(4 * TILE_SIZE, TILE_SIZE, Item.ItemType.SPEED_UP, gameMap.getGrid()));
-
-        // 6. Xử lý bàn phím
+        // Xử lý phím bấm (ESC để lưu cả Map, Player và Bot)
         addKeyListener(new KeyAdapter() {
             @Override
             public void keyPressed(KeyEvent e) {
                 if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
                     gameTimer.stop();
+                    // Lưu trạng thái đầy đủ kèm theo grid của map
+                    SaveManager.saveGameProgress(currentLevel, player, gameMap.getGrid());
+                    JOptionPane.showMessageDialog(GamePanel.this, "Đã lưu tiến trình màn chơi (Map, Bot, Nhân vật)!", "Thông báo", JOptionPane.INFORMATION_MESSAGE);
                     parentFrame.showScreen("LEVEL_SELECT");
                 }
                 player.handleKeyPressed(e, activeBombs);
@@ -78,7 +128,6 @@ public class GamePanel extends JPanel {
             }
         });
 
-        // 7. Game Loop - 60 FPS
         gameTimer = new Timer(16, e -> {
             updateGame();
             repaint();
@@ -87,76 +136,75 @@ public class GamePanel extends JPanel {
         gameTimer.start();
     }
 
-    // Cập nhật trạng thái game
+    // Hàm phụ trợ khởi tạo mặc định khi chơi mới
+    private void initDefaultGame(int levelIndex) {
+        player = new Player(TILE_SIZE, TILE_SIZE, gameMap.getGrid());
+        Mobs.add(player);
+        initBots(levelIndex);
+        // Khởi tạo Item
+        Mobs.add(new Item(3 * TILE_SIZE, TILE_SIZE, Item.ItemType.RANGE_UP, gameMap.getGrid()));
+        Mobs.add(new Item(4 * TILE_SIZE, TILE_SIZE, Item.ItemType.SPEED_UP, gameMap.getGrid()));
+    }
+
+    private void initBots(int levelIndex) {
+        if (levelIndex == 1) {
+            Mobs.add(new DollBot(5 * TILE_SIZE, 3 * TILE_SIZE, TILE_SIZE, TILE_SIZE, 1, gameMap.getGrid()));
+        } else if (levelIndex == 2) {
+            Mobs.add(new DollBot(5 * TILE_SIZE, 3 * TILE_SIZE, TILE_SIZE, TILE_SIZE, 1, gameMap.getGrid()));
+            Mobs.add(new KondoriaBot(7 * TILE_SIZE, 3 * TILE_SIZE, TILE_SIZE, TILE_SIZE, 1, player, gameMap.getGrid()));
+        } else {
+            Mobs.add(new DollBot(5 * TILE_SIZE, 3 * TILE_SIZE, TILE_SIZE, TILE_SIZE, 1, gameMap.getGrid()));
+            Mobs.add(new KondoriaBot(7 * TILE_SIZE, 3 * TILE_SIZE, TILE_SIZE, TILE_SIZE, 1, player, gameMap.getGrid()));
+            Mobs.add(new KondoriaBot(10 * TILE_SIZE, 8 * TILE_SIZE, TILE_SIZE, TILE_SIZE, 2, player, gameMap.getGrid()));
+        }
+    }
+
     private void updateGame() {
         if (isLevelCompleted) return;
 
-        // Cập nhật tất cả Mob
         for (int i = 0; i < Mobs.MOBS.size(); i++) {
             Mob mob = Mobs.MOBS.get(i);
             mob.update();
         }
 
-        // Xóa Mob đã chết, ngoại trừ Player
-        Mobs.MOBS.removeIf(
-                m -> !m.isSurvival() && !(m instanceof Player)
-        );
+        Mobs.MOBS.removeIf(m -> !m.isSurvival() && !(m instanceof Player));
 
-        // Cập nhật bom toàn cục
         for (int i = activeBombs.size() - 1; i >= 0; i--) {
             Bomb bomb = activeBombs.get(i);
             bomb.update();
-
             if (!bomb.isActive()) {
                 activeBombs.remove(i);
             }
         }
 
-        // ==========================================
-        // KIỂM TRA ĐIỀU KIỆN THẮNG: TIÊU DIỆT HẾT BOT
-        // ==========================================
+        // Kiểm tra thắng
         if (player.isSurvival()) {
-            // Đếm số lượng bot còn sống (Lọc bỏ Player và Item)
             long remainingBots = Mobs.MOBS.stream()
                     .filter(m -> !(m instanceof Player) && !(m instanceof Item) && m.isSurvival())
                     .count();
 
-            // Nếu không còn con bot nào trên bản đồ -> THẮNG
             if (remainingBots == 0) {
                 isLevelCompleted = true;
                 gameTimer.stop();
-
-                // 1. Mở khóa màn chơi tiếp theo và tự động lưu vào save.properties
                 LevelSelectScreen.unlockNextLevel(currentLevel);
+                SaveManager.clearSaveFile(); // Xóa save dở vì đã thắng màn
 
-                // 2. Thông báo cho người chơi
-                JOptionPane.showMessageDialog(
-                        this,
-                        "Chúc mừng! Bạn đã tiêu diệt hết bot và vượt qua Cửa ải " + currentLevel + "!",
-                        "Chiến Thắng!",
-                        JOptionPane.INFORMATION_MESSAGE
-                );
-
-                // 3. Quay trở lại màn hình chọn cửa ải
+                JOptionPane.showMessageDialog(this, "Chúc mừng! Bạn đã vượt qua Cửa ải " + currentLevel + "!", "Chiến Thắng!", JOptionPane.INFORMATION_MESSAGE);
                 parentFrame.showScreen("LEVEL_SELECT");
             }
         }
 
-        // Kiểm tra điều kiện thua (Player chết)
+        // Kiểm tra thua
         if (!player.isSurvival()) {
             isLevelCompleted = true;
             gameTimer.stop();
-            JOptionPane.showMessageDialog(
-                    this,
-                    "Bạn đã bị tiêu diệt! Trò chơi kết thúc.",
-                    "Thua Cuộc",
-                    JOptionPane.ERROR_MESSAGE
-            );
+            SaveManager.clearSaveFile(); // Xóa save dở vì đã thua
+
+            JOptionPane.showMessageDialog(this, "Bạn đã bị tiêu diệt! Trò chơi kết thúc.", "Thua Cuộc", JOptionPane.ERROR_MESSAGE);
             parentFrame.showScreen("LEVEL_SELECT");
         }
     }
 
-    // Vẽ bản đồ lấy dữ liệu từ GameMap
     private void drawMap(Graphics2D g2d) {
         int[][] grid = gameMap.getGrid();
         for (int y = 0; y < gameMap.getHeight(); y++) {
@@ -180,27 +228,23 @@ public class GamePanel extends JPanel {
         super.paintComponent(g);
         Graphics2D g2d = (Graphics2D) g;
 
-        // 1. Vẽ bản đồ
         drawMap(g2d);
 
-        // 2. Vẽ bom và hiệu ứng nổ
         for (Bomb bomb : activeBombs) {
             bomb.draw(g2d);
         }
 
-        // 3. Vẽ Player, Bot và Item
         for (Mob mob : Mobs.MOBS) {
             mob.draw(g2d);
         }
 
-        // 4. Vẽ HUD
         g2d.setColor(Color.WHITE);
         g2d.setFont(new Font("Arial", Font.BOLD, 14));
         g2d.drawString(
                 "Cửa ải: " + currentLevel + " | HP: " + player.getHp()
                         + " | Sức mạnh bom: " + player.getPower()
                         + " | Tốc độ: " + player.getSpeed()
-                        + " [ESC để thoát]",
+                        + " [ESC để lưu & thoát]",
                 10,
                 20
         );
