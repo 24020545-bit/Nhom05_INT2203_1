@@ -48,12 +48,13 @@ public class Item {
     }
 
     private void loadItemImage() {
+        // Cập nhật lại đường dẫn khớp với thư mục resources/Item trong project của bạn[cite: 1]
         String path = switch (type) {
-            case DAMAGE_UP -> "/ItemImage/item_damage.png";
-            case SPEED_UP  -> "/ItemImage/item_speed.png";
-            case RANGE_UP  -> "/ItemImage/item_range.png";
-            case HEAL      -> "/ItemImage/item_heal.png";
-            case BOMB_UP   -> "/ItemImage/item_bomb.png";
+            case DAMAGE_UP -> "/Item/dameUp.png";
+            case SPEED_UP  -> "/Item/speedUp.png";
+            case RANGE_UP  -> "/Item/rangeUp.png";
+            case HEAL      -> "/Item/heal.png";
+            case BOMB_UP   -> "/Item/bombUp.png";
         };
 
         try {
@@ -61,9 +62,11 @@ public class Item {
             if (imgUrl != null) {
                 itemImage = new ImageIcon(imgUrl).getImage();
             } else {
+                System.err.println("Không tìm thấy tệp ảnh item: " + path);
                 itemImage = null;
             }
         } catch (Exception e) {
+            System.err.println("Lỗi khi tải ảnh item " + path + ": " + e.getMessage());
             itemImage = null;
         }
     }

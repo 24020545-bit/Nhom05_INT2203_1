@@ -33,7 +33,7 @@ public class Player extends Mob {
     private String playerName = "Player";
 
     public Player(double startX, double startY, int[][] mapHash) {
-        super(startX, startY, PLAYER_WIDTH, PLAYER_HEIGHT, 2, 1, 3, 3, 1);
+        super(startX, startY, PLAYER_WIDTH, PLAYER_HEIGHT, 2, 1, 3, 10, 1);
         this.mapHash = mapHash;
         loadImages();
     }
