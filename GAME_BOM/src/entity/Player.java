@@ -5,10 +5,10 @@ import entity.mob.Mob;
 import utils.Direction;
 
 import java.awt.Color;
+import java.awt.Font;
 import java.awt.Graphics2D;
 import java.awt.Image;
 import java.awt.event.KeyEvent;
-import java.net.URL;
 import java.util.List;
 import javax.swing.ImageIcon;
 
@@ -24,9 +24,13 @@ public class Player extends Mob {
     private final Image[] upImgs = new Image[4];
     private final Image[] leftImgs = new Image[4];
     private final Image[] rightImgs = new Image[4];
+    private final Image[] deads = new Image[3];
 
     private int animIndex = 0;
     private int animTimer = 0;
+
+    // Thêm tên hiển thị cho người chơi (VD: "P1", "P2")
+    private String playerName = "Player";
 
     public Player(double startX, double startY, int[][] mapHash) {
         super(startX, startY, PLAYER_WIDTH, PLAYER_HEIGHT, 2, 1, 3, 3, 1);
@@ -34,31 +38,79 @@ public class Player extends Mob {
         loadImages();
     }
 
-    private void loadImages() {
-        for (int i = 0; i < 4; i++) {
-            try {
-                URL dUrl = getClass().getResource("/PlayerImage/d" + (i + 1) + ".png");
-                URL uUrl = getClass().getResource("/PlayerImage/u" + (i + 1) + ".png");
-                URL lUrl = getClass().getResource("/PlayerImage/l" + (i + 1) + ".png");
-                URL rUrl = getClass().getResource("/PlayerImage/r" + (i + 1) + ".png");
+    public void setPlayerName(String playerName) {
+        this.playerName = playerName;
+    }
 
-                downImgs[i]  = (dUrl != null) ? new ImageIcon(dUrl).getImage() : null;
-                upImgs[i]    = (uUrl != null) ? new ImageIcon(uUrl).getImage() : null;
-                leftImgs[i]  = (lUrl != null) ? new ImageIcon(lUrl).getImage() : null;
-                rightImgs[i] = (rUrl != null) ? new ImageIcon(rUrl).getImage() : null;
-            } catch (Exception e) {
-                System.err.println("Lỗi khi tải ảnh player: " + e.getMessage());
-            }
+    public String getPlayerName() {
+        return playerName;
+    }
+
+    private void loadImages() {
+        try {
+            var d1 = getClass().getResource("/PlayerImage/d1.png");
+            var d2 = getClass().getResource("/PlayerImage/d2.png");
+            var d3 = getClass().getResource("/PlayerImage/d3.png");
+            var d4 = getClass().getResource("/PlayerImage/d4.png");
+            downImgs[0] = (d1 != null) ? new ImageIcon(d1).getImage() : null;
+            downImgs[1] = (d2 != null) ? new ImageIcon(d2).getImage() : null;
+            downImgs[2] = (d3 != null) ? new ImageIcon(d3).getImage() : null;
+            downImgs[3] = (d4 != null) ? new ImageIcon(d4).getImage() : null;
+
+            var u1 = getClass().getResource("/PlayerImage/u1.png");
+            var u2 = getClass().getResource("/PlayerImage/u2.png");
+            var u3 = getClass().getResource("/PlayerImage/u3.png");
+            var u4 = getClass().getResource("/PlayerImage/u4.png");
+            upImgs[0] = (u1 != null) ? new ImageIcon(u1).getImage() : null;
+            upImgs[1] = (u2 != null) ? new ImageIcon(u2).getImage() : null;
+            upImgs[2] = (u3 != null) ? new ImageIcon(u3).getImage() : null;
+            upImgs[3] = (u4 != null) ? new ImageIcon(u4).getImage() : null;
+
+            var l1 = getClass().getResource("/PlayerImage/l1.png");
+            var l2 = getClass().getResource("/PlayerImage/l2.png");
+            var l3 = getClass().getResource("/PlayerImage/l3.png");
+            var l4 = getClass().getResource("/PlayerImage/l4.png");
+            leftImgs[0] = (l1 != null) ? new ImageIcon(l1).getImage() : null;
+            leftImgs[1] = (l2 != null) ? new ImageIcon(l2).getImage() : null;
+            leftImgs[2] = (l3 != null) ? new ImageIcon(l3).getImage() : null;
+            leftImgs[3] = (l4 != null) ? new ImageIcon(l4).getImage() : null;
+
+            var r1 = getClass().getResource("/PlayerImage/r1.png");
+            var r2 = getClass().getResource("/PlayerImage/r2.png");
+            var r3 = getClass().getResource("/PlayerImage/r3.png");
+            var r4 = getClass().getResource("/PlayerImage/r4.png");
+            rightImgs[0] = (r1 != null) ? new ImageIcon(r1).getImage() : null;
+            rightImgs[1] = (r2 != null) ? new ImageIcon(r2).getImage() : null;
+            rightImgs[2] = (r3 != null) ? new ImageIcon(r3).getImage() : null;
+            rightImgs[3] = (r4 != null) ? new ImageIcon(r4).getImage() : null;
+
+            var dead1 = getClass().getResource("/PlayerImage/dead1.png");
+            var dead2 = getClass().getResource("/PlayerImage/dead2.png");
+            var dead3 = getClass().getResource("/PlayerImage/dead3.png");
+            deads[0] = (dead1 != null) ? new ImageIcon(dead1).getImage() : null;
+            deads[1] = (dead2 != null) ? new ImageIcon(dead2).getImage() : null; // Giữ nguyên an toàn
+            deads[2] = (dead3 != null) ? new ImageIcon(dead3).getImage() : null;
+
+        } catch (Exception e) {
+            System.err.println("Lỗi khi tải ảnh player: " + e.getMessage());
         }
     }
 
     @Override
     public void draw(Graphics2D g2d) {
+        if (!survival) {
+            Image deadImg = (animIndex < deads.length) ? deads[animIndex] : deads[deads.length - 1];
+            if (deadImg != null) {
+                g2d.drawImage(deadImg, (int) x, (int) y, width, height, null);
+            }
+            return;
+        }
+
         Image currentImg = switch (currentDirection) {
-            case UP -> upImgs[animIndex];
-            case LEFT -> leftImgs[animIndex];
-            case RIGHT -> rightImgs[animIndex];
-            default -> downImgs[animIndex];
+            case UP -> upImgs[animIndex % upImgs.length];
+            case LEFT -> leftImgs[animIndex % leftImgs.length];
+            case RIGHT -> rightImgs[animIndex % rightImgs.length];
+            default -> downImgs[animIndex % downImgs.length];
         };
 
         if (currentImg != null) {
@@ -67,6 +119,36 @@ public class Player extends Mob {
             g2d.setColor(Color.RED);
             g2d.fillRect((int) x, (int) y, width, height);
         }
+
+        // --- VẼ TÊN VÀ THANH HP TRÊN ĐẦU PLAYER ---
+        g2d.setFont(new Font("Arial", Font.BOLD, 10));
+
+        // 1. Vẽ tên Player
+        g2d.setColor(Color.YELLOW);
+        g2d.drawString(playerName, (int) x - 2, (int) y - 12);
+
+        // 2. Vẽ thanh HP (thanh máu nhỏ)
+        int barWidth = width;
+        int barHeight = 4;
+        int barX = (int) x;
+        int barY = (int) y - 8;
+
+        // Nền thanh HP (màu đỏ tối)
+        g2d.setColor(new Color(100, 0, 0));
+        g2d.fillRect(barX, barY, barWidth, barHeight);
+
+        // Máu hiện tại (màu xanh lá)
+        // Giả sử HP tối đa là 3, tính tỷ lệ máu
+        int maxHp = 3;
+        double hpPercent = (double) Math.max(0, hp) / maxHp;
+        int currentHpWidth = (int) (barWidth * hpPercent);
+
+        g2d.setColor(Color.GREEN);
+        g2d.fillRect(barX, barY, currentHpWidth, barHeight);
+
+        // Viền đen xung quanh thanh HP
+        g2d.setColor(Color.BLACK);
+        g2d.drawRect(barX, barY, barWidth, barHeight);
     }
 
     public void handleKeyPressed(KeyEvent e, List<Bomb> globalBombs) {

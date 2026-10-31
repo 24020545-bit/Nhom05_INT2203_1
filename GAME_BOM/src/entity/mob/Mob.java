@@ -25,7 +25,10 @@ public abstract class Mob {
 
     protected Direction currentDirection;
 
-    // Đã loại bỏ 'lives' khỏi tham số constructor
+    // Quản lý nhịp đánh / cooldown của Mob
+    protected long lastAttackTime = 0;
+    protected long attackCooldown = 1000; // Mặc định 1000ms = 1 giây
+
     protected Mob(double x, double y, int width, int height,
                   int speed, int power, int bombLimit, int hp, int attackPower) {
         this.x = x;
@@ -77,9 +80,9 @@ public abstract class Mob {
         return new Rectangle((int) x, (int) y, width, height);
     }
     public double getX() { return x; }
-    public void setX(double x) { this.x = x; } // <-- Thêm hàm này
+    public void setX(double x) { this.x = x; }
     public double getY() { return y; }
-    public void setY(double y) { this.y = y; } // <-- Thêm hàm này
+    public void setY(double y) { this.y = y; }
     public void setLocation(double x, double y) { this.x = x; this.y = y; }
     public int getWidth() { return width; }
     public int getHeight() { return height; }
@@ -89,12 +92,13 @@ public abstract class Mob {
     public void setSpeed(int speed) { this.speed = speed; }
     public int getPower() { return power; }
     public void setPower(int power) { this.power = power; }
-    public int getBombLimit() {
-        return bombLimit;
-    }
-    public void setBombLimit(int bombLimit) {
-        this.bombLimit = bombLimit;
-    }
+    public int getBombLimit() { return bombLimit; }
+    public void setBombLimit(int bombLimit) { this.bombLimit = bombLimit; }
     public Direction getCurrentDirection() { return currentDirection; }
     public void setCurrentDirection(Direction currentDirection) { this.currentDirection = currentDirection; }
+
+    public long getAttackCooldown() { return attackCooldown; }
+    public void setAttackCooldown(long attackCooldown) { this.attackCooldown = attackCooldown; }
+    public long getLastAttackTime() { return lastAttackTime; }
+    public void setLastAttackTime(long lastAttackTime) { this.lastAttackTime = lastAttackTime; }
 }

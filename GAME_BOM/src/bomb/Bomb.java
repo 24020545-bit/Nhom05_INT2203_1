@@ -22,9 +22,6 @@ public class Bomb {
     private int explosionRange = 2;
     private int damage = 1; // Sát thương nhận từ Player
 
-    // Biến đếm thời gian cho phép người chơi thoải mái bước ra khỏi ô bom mà không bị kẹt
-    private int safeWalkTimer = 40;
-
     private int flameLeft = 0;
     private int flameRight = 0;
     private int flameUp = 0;
@@ -75,17 +72,11 @@ public class Bomb {
         int i = (int) (y / TILE_SIZE);
 
         if (!exploded) {
-            // Trong khoảng thời gian an toàn đầu tiên, luôn giữ mã 5 để tránh kẹt tuyệt đối
-            if (safeWalkTimer > 0) {
-                safeWalkTimer--;
-                mapHash[i][j] = 5;
+            // Kiểm tra trực tiếp: Cứ có Player đang đứng đè lên ô bom này là giữ nguyên mã 5
+            if (isPlayerStandingOnThisTile(j, i)) {
+                mapHash[i][j] = 0; // Vẫn đang đứng trên bom -> Cho đi qua / đứng thoải mái không sợ kẹt
             } else {
-                // Hết thời gian an toàn, kiểm tra xem người chơi đã rời đi thật chưa
-                if (entityHasLeft(j, i)) {
-                    mapHash[i][j] = 4; // Đã rời đi -> Khóa lại thành vật cản hoàn toàn
-                } else {
-                    mapHash[i][j] = 5; // Vẫn đang đứng đè -> Giữ cho đi qua
-                }
+                mapHash[i][j] = 4; // Đã bước ra ngoài hoàn toàn -> Khóa cứng thành vật cản ngay lập tức
             }
 
             fuseTimer++;
@@ -103,25 +94,19 @@ public class Bomb {
         }
     }
 
-    // Hàm kiểm tra xem người chơi đã rời khỏi ô chứa bom này chưa
-    private boolean entityHasLeft(int bombTileX, int bombTileY) {
+    // Hàm kiểm tra chính xác xem Player có đang đứng giao nhau với ô chứa bom này không
+    private boolean isPlayerStandingOnThisTile(int bombTileX, int bombTileY) {
         for (Mob mob : Mobs.MOBS) {
             if (mob.isSurvival() && mob instanceof Player) {
-                double playerCenterX = mob.getX() + mob.getWidth() / 2.0;
-                double playerCenterY = mob.getY() + mob.getHeight() / 2.0;
+                Rectangle playerBounds = mob.getBounds();
+                Rectangle bombTileBounds = new Rectangle(bombTileX * TILE_SIZE, bombTileY * TILE_SIZE, TILE_SIZE, TILE_SIZE);
 
-                int tileLeft = bombTileX * TILE_SIZE;
-                int tileRight = (bombTileX + 1) * TILE_SIZE;
-                int tileTop = bombTileY * TILE_SIZE;
-                int tileBottom = (bombTileY + 1) * TILE_SIZE;
-
-                if (playerCenterX >= tileLeft && playerCenterX < tileRight &&
-                        playerCenterY >= tileTop && playerCenterY < tileBottom) {
-                    return false;
+                if (playerBounds.intersects(bombTileBounds)) {
+                    return true;
                 }
             }
         }
-        return true;
+        return false;
     }
 
     public void triggerExplosion() {

@@ -15,6 +15,9 @@ public class GameFrame extends JFrame {
     private KeyBindScreen keyBindScreen;
     private LevelSelectScreen levelSelectScreen;
 
+    // Biến lưu trữ số lượng người chơi được chọn từ Cài đặt (Mặc định là 1 người chơi)
+    private int playerCount = 1;
+
     public GameFrame() {
         utils.SaveManager.loadGame();
         setTitle("Bomberman Game");
@@ -50,17 +53,26 @@ public class GameFrame extends JFrame {
         cardLayout.show(containerPanel, name);
     }
 
+    // --- CÁC HÀM GETTER/SETTER CHO SỐ LƯỢNG NGƯỜI CHƠI ---
+    public int getPlayerCount() {
+        return playerCount;
+    }
+
+    public void setPlayerCount(int playerCount) {
+        this.playerCount = Math.max(1, Math.min(2, playerCount)); // Giới hạn từ 1 đến 2 người
+    }
+
     public void startLevel(int levelIndex) {
-        // Tạo màn chơi GamePanel mới từ đầu dựa theo level được chọn
-        GamePanel gamePanel = new GamePanel(this, levelIndex);
+        // Tạo màn chơi GamePanel mới từ đầu, truyền kèm theo số lượng người chơi đã chọn
+        GamePanel gamePanel = new GamePanel(this, levelIndex, playerCount);
         containerPanel.add(gamePanel, "GAME_PLAY_" + levelIndex);
         cardLayout.show(containerPanel, "GAME_PLAY_" + levelIndex);
         gamePanel.requestFocusInWindow();
     }
 
-    // Bổ sung phương thức hỗ trợ khởi tạo màn chơi khôi phục từ file save dở
+    // Khởi tạo màn chơi khôi phục từ file save dở (truyền kèm properties và số lượng người chơi tương ứng)
     public void startLevelWithSave(int levelIndex, Properties saveProps) {
-        GamePanel gamePanel = new GamePanel(this, levelIndex, saveProps);
+        GamePanel gamePanel = new GamePanel(this, levelIndex, playerCount, saveProps);
         containerPanel.add(gamePanel, "GAME_PLAY_" + levelIndex);
         cardLayout.show(containerPanel, "GAME_PLAY_" + levelIndex);
         gamePanel.requestFocusInWindow();

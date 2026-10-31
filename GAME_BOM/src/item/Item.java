@@ -1,24 +1,21 @@
 package item;
 
 import entity.Player;
-import entity.mob.Mob;
-import entity.mob.Mobs;
-import utils.Direction;
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.Image;
+import java.awt.Rectangle;
 import java.net.URL;
 import javax.swing.ImageIcon;
 
-public class Item extends Mob {
+public class Item {
 
-    // Định nghĩa các loại vật phẩm
     public enum ItemType {
-        DAMAGE_UP(6),  // Tăng sát thương (mã 6)
-        SPEED_UP(7),   // Tăng tốc độ (mã 7)
-        RANGE_UP(8),   // Tăng phạm vi bom (mã 8)
-        HEAL(9),       // Hồi máu (mã 9)
-        BOMB_UP(10);   // Tăng số lượng bom tối đa (mã 10)
+        DAMAGE_UP(5),
+        SPEED_UP(6),
+        RANGE_UP(7),
+        HEAL(8),
+        BOMB_UP(9);
 
         private final int mapValue;
 
@@ -31,15 +28,20 @@ public class Item extends Mob {
         }
     }
 
+    private final double x;
+    private final double y;
+    private final int width = 32;
+    private final int height = 32;
     private final ItemType type;
     private Image itemImage;
     private final int[][] mapHash;
+    private boolean collected = false;
 
     public Item(double x, double y, ItemType type, int[][] mapHash) {
-        super(x, y, 32, 32, 0, 0, 0, 0, 0);
+        this.x = x;
+        this.y = y;
         this.type = type;
         this.mapHash = mapHash;
-        this.survival = true;
 
         loadItemImage();
         updateMapHash(type.getMapValue());
@@ -59,65 +61,48 @@ public class Item extends Mob {
             if (imgUrl != null) {
                 itemImage = new ImageIcon(imgUrl).getImage();
             } else {
-                System.err.println("Không tìm thấy tệp ảnh item: " + path);
                 itemImage = null;
             }
         } catch (Exception e) {
-            System.err.println("Lỗi khi tải ảnh item " + path + ": " + e.getMessage());
             itemImage = null;
         }
     }
 
-    @Override
-    public void update() {
-        if (!survival) return;
+    public void update(Player player) {
+        if (collected || player == null || !player.isSurvival()) return;
 
-        for (Mob mob : Mobs.MOBS) {
-            if (mob instanceof Player && mob.isSurvival()) {
-                if (this.getBounds().intersects(mob.getBounds())) {
-                    applyEffect((Player) mob);
-                    this.survival = false;
-                    updateMapHash(0); // Nhặt xong xóa khỏi mapHash
-                }
-            }
+        // Kiểm tra va chạm với Player
+        if (this.getBounds().intersects(player.getBounds())) {
+            applyEffect(player);
+            this.collected = true;
+            updateMapHash(0); // Nhặt xong xóa khỏi mapHash (gán lại = 0 / EMPTY)
         }
     }
 
     private void applyEffect(Player player) {
         switch (type) {
-            case DAMAGE_UP:
-                player.setAttackPower(player.getAttackPower() + 1);
-                break;
-            case SPEED_UP:
-                if (player.getSpeed() < 4) {
-                    player.setSpeed(player.getSpeed() + 1);
-                }
-                break;
-            case RANGE_UP:
-                player.setPower(player.getPower() + 1);
-                break;
-            case HEAL:
-                player.heal(1);
-                break;
-            case BOMB_UP:
-                player.setBombLimit(player.getBombLimit() + 1);
-                break;
+            case DAMAGE_UP -> player.setAttackPower(player.getAttackPower() + 1);
+            case SPEED_UP  -> {
+                if (player.getSpeed() < 4) player.setSpeed(player.getSpeed() + 1);
+            }
+            case RANGE_UP  -> player.setPower(player.getPower() + 1);
+            case HEAL      -> player.heal(1);
+            case BOMB_UP   -> player.setBombLimit(player.getBombLimit() + 1);
         }
     }
 
-    @Override
     public void draw(Graphics2D g2d) {
-        if (!survival) return;
+        if (collected) return;
 
         if (itemImage != null) {
             g2d.drawImage(itemImage, (int) x, (int) y, width, height, null);
         } else {
             switch (type) {
-                case DAMAGE_UP: g2d.setColor(Color.RED); break;
-                case SPEED_UP:  g2d.setColor(Color.BLUE); break;
-                case RANGE_UP:  g2d.setColor(Color.ORANGE); break;
-                case HEAL:      g2d.setColor(Color.GREEN); break;
-                case BOMB_UP:   g2d.setColor(Color.MAGENTA); break;
+                case DAMAGE_UP -> g2d.setColor(Color.RED);
+                case SPEED_UP  -> g2d.setColor(Color.BLUE);
+                case RANGE_UP  -> g2d.setColor(Color.ORANGE);
+                case HEAL      -> g2d.setColor(Color.GREEN);
+                case BOMB_UP   -> g2d.setColor(Color.MAGENTA);
             }
             g2d.fillRect((int) x, (int) y, width, height);
             g2d.setColor(Color.BLACK);
@@ -125,9 +110,12 @@ public class Item extends Mob {
         }
     }
 
-    @Override
-    public void move(Direction direction) {
-        // Đứng yên
+    public Rectangle getBounds() {
+        return new Rectangle((int) x, (int) y, width, height);
+    }
+
+    public boolean isCollected() {
+        return collected;
     }
 
     private void updateMapHash(int value) {

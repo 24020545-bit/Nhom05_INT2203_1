@@ -3,8 +3,6 @@ package utils;
 import entity.Player;
 import entity.mob.Mob;
 import entity.mob.Mobs;
-import entity.bot.DollBot;
-import entity.bot.KondoriaBot;
 
 import java.io.*;
 import java.util.Properties;
@@ -42,20 +40,24 @@ public class SaveManager {
         }
     }
 
-    // LƯU TRẠNG THÁI CHI TIẾT: PLAYER, MAP GRID VÀ TẤT CẢ BOT
-    public static void saveGameProgress(int currentLevel, Player player, int[][] grid) {
+    // LƯU TRẠNG THÁI CHI TIẾT: HỖ TRỢ LƯU NHIỀU PLAYER ĐỒNG THỜI
+    public static void saveGameProgress(int currentLevel, java.util.List<Player> players, int[][] grid) {
         Properties props = new Properties();
         props.setProperty("unlockedLevel", String.valueOf(unlockedLevel));
         props.setProperty("currentLevel", String.valueOf(currentLevel));
+        props.setProperty("playerCount", String.valueOf(players.size()));
 
-        // 1. Lưu thông số Player
-        props.setProperty("playerX", String.valueOf(player.getX()));
-        props.setProperty("playerY", String.valueOf(player.getY()));
-        props.setProperty("playerHp", String.valueOf(player.getHp()));
-        props.setProperty("playerPower", String.valueOf(player.getPower()));
-        props.setProperty("playerSpeed", String.valueOf(player.getSpeed()));
+        // 1. Lưu thông số của từng Player
+        for (int i = 0; i < players.size(); i++) {
+            Player p = players.get(i);
+            props.setProperty("player_" + i + "_x", String.valueOf(p.getX()));
+            props.setProperty("player_" + i + "_y", String.valueOf(p.getY()));
+            props.setProperty("player_" + i + "_hp", String.valueOf(p.getHp()));
+            props.setProperty("player_" + i + "_power", String.valueOf(p.getPower()));
+            props.setProperty("player_" + i + "_speed", String.valueOf(p.getSpeed()));
+        }
 
-        // 2. Lưu trạng thái bản đồ (Mảng 2 chiều grid chuyển thành chuỗi phân tách bởi dấu phẩy)
+        // 2. Lưu trạng thái bản đồ
         StringBuilder gridStr = new StringBuilder();
         for (int y = 0; y < grid.length; y++) {
             for (int x = 0; x < grid[y].length; x++) {
@@ -70,7 +72,7 @@ public class SaveManager {
         // 3. Lưu danh sách Bot còn sống
         int botCount = 0;
         for (Mob mob : Mobs.MOBS) {
-            if (!(mob instanceof Player) && !(mob instanceof item.Item) && mob.isSurvival()) {
+            if (!(mob instanceof Player) && mob.isSurvival()) {
                 String className = mob.getClass().getName();
                 props.setProperty("bot_" + botCount + "_type", className);
                 props.setProperty("bot_" + botCount + "_x", String.valueOf(mob.getX()));
@@ -83,7 +85,7 @@ public class SaveManager {
 
         try (OutputStream output = new FileOutputStream(SAVE_FILE)) {
             props.store(output, "Bomberman In-Game Full State Save");
-            System.out.println("Đã lưu toàn bộ trạng thái màn chơi (Map + Bot + Player)!");
+            System.out.println("Đã lưu toàn bộ trạng thái màn chơi (Map + Bot + Players)!");
         } catch (IOException e) {
             System.err.println("Lỗi khi lưu game dở: " + e.getMessage());
         }

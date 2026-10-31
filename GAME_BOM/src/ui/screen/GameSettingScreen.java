@@ -28,7 +28,8 @@ public class GameSettingScreen extends JPanel {
         lblPlayers.setForeground(Color.WHITE);
         lblPlayers.setFont(new Font("Arial", Font.PLAIN, 16));
 
-        playerChoiceBox = new JComboBox<>(new String[]{"1 Người chơi", "2 Người chơi (Chưa hỗ trợ)"});
+        // Cho phép chọn 1 hoặc 2 người chơi
+        playerChoiceBox = new JComboBox<>(new String[]{"1 Người chơi", "2 Người chơi"});
         panelOptions.add(lblPlayers);
         panelOptions.add(playerChoiceBox);
         add(panelOptions, gbc);
@@ -36,7 +37,11 @@ public class GameSettingScreen extends JPanel {
         JButton nextBtn = new JButton("Tiếp tục");
         nextBtn.setFont(new Font("Arial", Font.BOLD, 16));
         nextBtn.setPreferredSize(new Dimension(150, 40));
-        nextBtn.addActionListener(e -> frame.showScreen("LEVEL_SELECT"));
+        nextBtn.addActionListener(e -> {
+            int selectedPlayers = playerChoiceBox.getSelectedIndex() + 1; // 1 hoặc 2
+            frame.setPlayerCount(selectedPlayers); // Lưu cấu hình số người chơi vào Frame
+            frame.showScreen("LEVEL_SELECT");
+        });
 
         JButton backBtn = new JButton("Quay lại");
         backBtn.setFont(new Font("Arial", Font.PLAIN, 14));

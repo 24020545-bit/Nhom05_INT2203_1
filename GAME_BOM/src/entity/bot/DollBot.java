@@ -1,148 +1,116 @@
 package entity.bot;
 
+import entity.Player;
 import entity.mob.Mob;
 import utils.Direction;
+import utils.RandomMovement;
 
 import java.awt.Graphics2D;
 import java.awt.Color;
-import java.util.Random;
+import java.awt.Image;
+import javax.swing.ImageIcon;
 
 public class DollBot extends Mob {
-    private Random random;
-    private int changeDirCounter = 0;
-    private int[][] mapHash; // Mảng bản đồ để check tường và bom
+    private int[][] mapHash;
     private final int TILE_SIZE = 32;
-    private double moveHori = 0;
-    private double moveVerti = 0;
+    private Player targetPlayer;
+    private RandomMovement randomMovement;
 
-    public DollBot(double x, double y, int width, int height, int speed, int[][] mapHash) {
-        super(x, y, width, height, 1, speed, 0, 3, 1);
+    private Image leftImg;
+    private Image rightImg;
+    private Image dameImg;
+    private final Image[] deadImgs = new Image[2];
+
+    private int animIndex = 0;
+    private int animTimer = 0;
+
+    public DollBot(double x, double y, int width, int height, int speed, int hp, int attackPower, long attackCooldown, Player targetPlayer, int[][] mapHash) {
+        super(x, y, width, height, 1, speed, 0, hp, attackPower);
+        this.targetPlayer = targetPlayer;
         this.mapHash = mapHash;
-        this.random = new Random();
-        this.currentDirection = getRandomDirection();
-        updateVelocity(this.currentDirection);
+        this.attackCooldown = attackCooldown;
+        this.randomMovement = new RandomMovement(x, y, width, height, speed, mapHash);
+        this.currentDirection = randomMovement.getCurrentDirection();
+        loadImages();
+    }
+
+    private void loadImages() {
+        try {
+            var l = getClass().getResource("/Bot/DollBot/left.png");
+            var r = getClass().getResource("/Bot/DollBot/right.png");
+            var d = getClass().getResource("/Bot/DollBot/dame.png");
+            var dead1 = getClass().getResource("/Bot/DollBot/dead1.png");
+            var dead2 = getClass().getResource("/Bot/DollBot/dead2.png");
+
+            leftImg = (l != null) ? new ImageIcon(l).getImage() : null;
+            rightImg = (r != null) ? new ImageIcon(r).getImage() : null;
+            dameImg = (d != null) ? new ImageIcon(d).getImage() : null;
+            deadImgs[0] = (dead1 != null) ? new ImageIcon(dead1).getImage() : null;
+            deadImgs[1] = (dead2 != null) ? new ImageIcon(dead2).getImage() : null;
+        } catch (Exception e) {
+            System.err.println("Lỗi khi tải ảnh DollBot: " + e.getMessage());
+        }
     }
 
     @Override
     public void update() {
         if (!survival) return;
 
-        // Định kỳ đổi hướng ngẫu nhiên sau một khoảng thời gian
-        changeDirCounter++;
-        if (changeDirCounter >= 50) {
-            this.currentDirection = getRandomDirection();
-            updateVelocity(this.currentDirection);
-            changeDirCounter = 0;
-        }
-
-        moveEnemy();
-    }
-
-    private void moveEnemy() {
-        // Tính toán tọa độ ô (tile) hiện tại của bot (giống hệt KondoriaBot)
-        int j = (int) ((x + width / 2.0) / TILE_SIZE);
-        int i = (int) ((y + height / 2.0) / TILE_SIZE);
-
-        // Khi bot dịch chuyển đến đúng tâm ô lưới, tiến hành căn chỉnh và check hướng đi
-        if (Math.abs(j * TILE_SIZE - x) < speed && Math.abs(i * TILE_SIZE - y) < speed) {
-            x = j * TILE_SIZE;
-            y = i * TILE_SIZE;
-
-            // Kiểm tra xem hướng hiện tại có đi tiếp được không, nếu vướng thì đổi hướng ngẫu nhiên khác ngay tại tâm
-            if (!isValidPosition(x + moveHori, y + moveVerti)) {
-                this.currentDirection = getRandomDirection();
-                updateVelocity(this.currentDirection);
+        if (targetPlayer != null && targetPlayer.isSurvival()) {
+            if (this.getBounds().intersects(targetPlayer.getBounds())) {
+                long currentTime = System.currentTimeMillis();
+                if (currentTime - lastAttackTime >= attackCooldown) {
+                    targetPlayer.takeDamage(this.attackPower);
+                    lastAttackTime = currentTime;
+                }
             }
         }
 
-        double nextX = x + moveHori;
-        double nextY = y + moveVerti;
+        randomMovement.update(x, y);
+        this.x = randomMovement.getX();
+        this.y = randomMovement.getY();
+        this.currentDirection = randomMovement.getCurrentDirection();
 
-        // Kiểm tra vị trí hợp lệ trên đường di chuyển
-        if (isValidPosition(nextX, nextY)) {
-            x = nextX;
-            y = nextY;
-        } else {
-            // Nếu đụng bom/tường giữa đường, lập tức snap về tâm ô và đổi hướng ngẫu nhiên để không bị kẹt cứng
-            x = j * TILE_SIZE;
-            y = i * TILE_SIZE;
-            this.currentDirection = getRandomDirection();
-            updateVelocity(this.currentDirection);
+        animTimer++;
+        if (animTimer > 10) {
+            animIndex++;
+            animTimer = 0;
         }
-
-        // Làm tròn tọa độ giúp di chuyển mượt mà, tránh lệch pixel (học hỏi từ hàm lamtron trong KondoriaBot)
-        x = lamtron(x * 10) / 10.0;
-        y = lamtron(y * 10) / 10.0;
-    }
-
-    private void updateVelocity(Direction dir) {
-        moveHori = 0;
-        moveVerti = 0;
-        switch (dir) {
-            case UP:
-                moveVerti = -speed;
-                break;
-            case DOWN:
-                moveVerti = speed;
-                break;
-            case LEFT:
-                moveHori = -speed;
-                break;
-            case RIGHT:
-                moveHori = speed;
-                break;
-        }
-    }
-
-    private boolean isValidPosition(double nextX, double nextY) {
-        if (mapHash == null) return true;
-
-        int leftTile = (int) (nextX / TILE_SIZE);
-        int rightTile = (int) ((nextX + width - 1) / TILE_SIZE);
-        int topTile = (int) (nextY / TILE_SIZE);
-        int bottomTile = (int) ((nextY + height - 1) / TILE_SIZE);
-
-        try {
-            int t1 = mapHash[topTile][leftTile];
-            int t2 = mapHash[topTile][rightTile];
-            int t3 = mapHash[bottomTile][leftTile];
-            int t4 = mapHash[bottomTile][rightTile];
-
-            // Kiểm tra va chạm với bom hoặc tường (tuỳ theo quy ước giá trị số trên map của bạn, ví dụ: 0 là đường đi, 4/5 là bom)
-            if (t1 == 4 || t2 == 4 || t3 == 4 || t4 == 4) return false;
-
-            return t1 == 0 && t2 == 0 && t3 == 0 && t4 == 0;
-        } catch (Exception e) {
-            return false; // Chạm biên ngoài map
-        }
-    }
-
-    private double lamtron(double a) {
-        double num = (int) (a);
-        if (num + 0.5 <= a) {
-            num += 1;
-        }
-        return num;
-    }
-
-    private Direction getRandomDirection() {
-        Direction[] dirs = Direction.values();
-        return dirs[random.nextInt(dirs.length)];
     }
 
     @Override
     public void move(Direction direction) {
         this.currentDirection = direction;
-        updateVelocity(direction);
     }
 
     @Override
     public void draw(Graphics2D g2d) {
         if (!survival && !deading) return;
 
-        g2d.setColor(new Color(219, 112, 147)); // Màu hồng DollBot
-        g2d.fillRect((int) x, (int) y, width, height);
-        g2d.setColor(Color.BLACK);
-        g2d.drawRect((int) x, (int) y, width, height);
+        if (!survival) {
+            Image deadImg = deadImgs[animIndex % deadImgs.length];
+            if (deadImg != null) {
+                g2d.drawImage(deadImg, (int) x, (int) y, width, height, null);
+            }
+            return;
+        }
+
+        // Chọn ảnh theo hướng di chuyển (trái/phải)
+        Image currentImg = rightImg;
+        if (currentDirection == Direction.LEFT) {
+            currentImg = (leftImg != null) ? leftImg : rightImg;
+        } else {
+            currentImg = (rightImg != null) ? rightImg : leftImg;
+        }
+
+        if (currentImg != null) {
+            g2d.drawImage(currentImg, (int) x, (int) y, width, height, null);
+        } else {
+            // Fallback vẽ hình chữ nhật nếu chưa có ảnh
+            g2d.setColor(new Color(219, 112, 147));
+            g2d.fillRect((int) x, (int) y, width, height);
+            g2d.setColor(Color.BLACK);
+            g2d.drawRect((int) x, (int) y, width, height);
+        }
     }
 }
