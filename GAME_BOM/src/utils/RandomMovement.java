@@ -4,8 +4,8 @@ import java.util.Random;
 
 public class RandomMovement {
     private double x, y;
-    private final double speed;
-    private final int width, height;
+    private double speed;
+    private int width, height;
     private final int TILE_SIZE = 32;
     private int[][] mapHash;
 

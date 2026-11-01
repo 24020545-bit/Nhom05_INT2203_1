@@ -11,18 +11,23 @@ import java.awt.Image;
 import javax.swing.ImageIcon;
 
 public class KondoriaBot extends Mob {
-    private Player[] players;
+    private Player[] players; // Mảng chứa các người chơi (Player 1, Player 2,...)
     private int[][] mapHash;
     private final int TILE_SIZE = 32;
     private double moveHori = 0;
     private double moveVerti = 0;
 
-    private static final int CHASE_RADIUS = 4;
+    // Biến hỗ trợ trượt mượt khi thoát khỏi tường
+    private double targetX = -1, targetY = -1;
+    private boolean isEscapingWall = false;
+
+    private static final int CHASE_RADIUS = 5;
     private static final long HIT_STUN_DURATION = 500;
 
     private RandomMovement randomMovement;
-    private Player currentTarget = null;
+    private Player currentTarget = null; // Người chơi đang bị đuổi theo hiện tại
 
+    // Tài nguyên hình ảnh
     private Image leftImg;
     private Image rightImg;
     private Image dameImg;
@@ -31,7 +36,7 @@ public class KondoriaBot extends Mob {
     private int animIndex = 0;
     private int animTimer = 0;
 
-    // Khởi tạo KondoriaBot hỗ trợ nhiều người chơi và khả năng đi xuyên tường
+    // Constructor hỗ trợ nhiều người chơi
     public KondoriaBot(double x, double y, int width, int height, int speed, int hp, int attackPower, long attackCooldown, Player[] players, int[][] mapHash) {
         super(x, y, width, height, speed, 0, 0, hp, attackPower);
         this.players = players;
@@ -42,7 +47,6 @@ public class KondoriaBot extends Mob {
         loadImages();
     }
 
-    // Tải các tệp hình ảnh đồ họa di chuyển và trạng thái chết cho KondoriaBot
     private void loadImages() {
         try {
             var l = getClass().getResource("/Bot/KondoriaBot/left.png");
@@ -61,11 +65,11 @@ public class KondoriaBot extends Mob {
         }
     }
 
-    // Cập nhật trạng thái vòng đời, kiểm tra va chạm tấn công Player và xử lý logic di chuyển mỗi frame
     @Override
     public void update() {
         if (!survival) return;
 
+        // Kiểm tra va chạm và tấn công bất kỳ Player nào đang sống
         if (players != null) {
             long currentTime = System.currentTimeMillis();
             for (Player player : players) {
@@ -89,7 +93,6 @@ public class KondoriaBot extends Mob {
         }
     }
 
-    // Xử lý logic di chuyển: đuổi theo mục tiêu khi ở trong bán kính quét hoặc di chuyển ngẫu nhiên
     private void moveEnemy() {
         if (players == null) return;
 
@@ -104,6 +107,7 @@ public class KondoriaBot extends Mob {
         int j = (int) ((x + width / 2.0) / TILE_SIZE);
         int i = (int) ((y + height / 2.0) / TILE_SIZE);
 
+        // --- TÌM XEM CÓ PLAYER NÀO TRONG PHẠM VI KHÔNG ---
         currentTarget = null;
         for (Player p : players) {
             if (p != null && p.isSurvival()) {
@@ -114,13 +118,17 @@ public class KondoriaBot extends Mob {
                 int distanceY = Math.abs(ip - i);
 
                 if (distanceX <= CHASE_RADIUS && distanceY <= CHASE_RADIUS) {
-                    currentTarget = p;
+                    currentTarget = p; // Phát hiện ra player này, gán làm mục tiêu và đuổi theo
                     break;
                 }
             }
         }
 
         if (currentTarget != null) {
+            // Khi phát hiện người chơi, hủy trạng thái thoát tường đang chạy dở (nếu có) để quay lại đuổi
+            isEscapingWall = false;
+
+            // --- TRẠNG THÁI ĐUỔI THEO & ĐI XUYÊN TƯỜNG (PHÁT HIỆN PLAYER) ---
             int jp = (int) ((currentTarget.getX() + currentTarget.getWidth() / 2.0) / TILE_SIZE);
             int ip = (int) ((currentTarget.getY() + currentTarget.getHeight() / 2.0) / TILE_SIZE);
 
@@ -159,10 +167,71 @@ public class KondoriaBot extends Mob {
                 }
             }
 
+            // Đi xuyên tường khi đuổi theo mục tiêu
             x += moveHori;
             y += moveVerti;
 
+            // === CHẶN BIÊN MAP ===
+            if (mapHash != null) {
+                double minX = 0;
+                double minY = 0;
+                double maxX = (mapHash[0].length * TILE_SIZE) - width;
+                double maxY = (mapHash.length * TILE_SIZE) - height;
+
+                if (x < minX) x = minX;
+                if (x > maxX) x = maxX;
+                if (y < minY) y = minY;
+                if (y > maxY) y = maxY;
+            }
+
         } else {
+            // --- TRẠNG THÁI MẤT MỤC TIÊU / ĐI NGẪU NHIÊN ---
+
+            // 1. Nếu bot đang ở trong tường và chưa thiết lập điểm trượt thoát ra
+            if (!randomMovement.isValidPosition(x, y) && !isEscapingWall) {
+                for (int r = 1; r <= 3; r++) {
+                    double[][] candidateCoords = {
+                            { (j + r) * TILE_SIZE, i * TILE_SIZE },
+                            { (j - r) * TILE_SIZE, i * TILE_SIZE },
+                            { j * TILE_SIZE, (i + r) * TILE_SIZE },
+                            { j * TILE_SIZE, (i - r) * TILE_SIZE },
+                            { (j + r) * TILE_SIZE, (i + r) * TILE_SIZE },
+                            { (j - r) * TILE_SIZE, (i - r) * TILE_SIZE }
+                    };
+                    for (double[] coord : candidateCoords) {
+                        if (randomMovement.isValidPosition(coord[0], coord[1])) {
+                            targetX = coord[0];
+                            targetY = coord[1];
+                            isEscapingWall = true;
+                            break;
+                        }
+                    }
+                    if (isEscapingWall) break;
+                }
+            }
+
+            // 2. Nếu đang trong quá trình trượt từ từ ra khỏi tường (không tốc biến)
+            if (isEscapingWall) {
+                double dx = targetX - x;
+                double dy = targetY - y;
+                double dist = Math.sqrt(dx * dx + dy * dy);
+
+                if (dist <= speed) {
+                    // Đã trượt đến đích gần nhất
+                    x = targetX;
+                    y = targetY;
+                    isEscapingWall = false; // Hoàn tất thoát tường
+                } else {
+                    // Dịch chuyển từng bước nhỏ bằng đúng giá trị speed hướng về ô trống
+                    x += (dx / dist) * speed;
+                    y += (dy / dist) * speed;
+                }
+                moveHori = 0;
+                moveVerti = 0;
+                return; // Tạm dừng chuyển sang random cho tới khi thoát hẳn ra ngoài
+            }
+
+            // 3. Khi đã đứng ở ô trống an toàn, chuyển giao cho bộ đi ngẫu nhiên bám lưới
             randomMovement.update(x, y);
             this.x = randomMovement.getX();
             this.y = randomMovement.getY();
@@ -172,13 +241,11 @@ public class KondoriaBot extends Mob {
         }
     }
 
-    // Cập nhật hướng di chuyển hiện tại của KondoriaBot
     @Override
     public void move(Direction direction) {
         this.currentDirection = direction;
     }
 
-    // Vẽ hình ảnh sprite hoặc khối màu đại diện cho KondoriaBot và hiệu ứng lúc chết lên màn hình
     @Override
     public void draw(Graphics2D g2d) {
         if (!survival && !deading) return;
@@ -191,6 +258,7 @@ public class KondoriaBot extends Mob {
             return;
         }
 
+        // Chọn ảnh theo hướng di chuyển (trái/phải)
         Image currentImg = (currentDirection == Direction.LEFT) ? leftImg : rightImg;
         if (currentImg == null) {
             currentImg = (leftImg != null) ? leftImg : rightImg;

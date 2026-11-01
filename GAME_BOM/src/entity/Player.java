@@ -31,24 +31,20 @@ public class Player extends Mob {
 
     private String playerName = "Player";
 
-    // Khởi tạo Player tại vị trí ban đầu với các chỉ số mặc định
     public Player(double startX, double startY, int[][] mapHash) {
         super(startX, startY, PLAYER_WIDTH, PLAYER_HEIGHT, 3, 1, 3, 10, 1);
         this.mapHash = mapHash;
         loadImages();
     }
 
-    // Đặt tên hiển thị cho người chơi
     public void setPlayerName(String playerName) {
         this.playerName = playerName;
     }
 
-    // Lấy tên hiển thị hiện tại của người chơi
     public String getPlayerName() {
         return playerName;
     }
 
-    // Tải toàn bộ tài nguyên hình ảnh hoạt họa di chuyển 4 hướng và hình ảnh khi chết của Player
     private void loadImages() {
         try {
             var d1 = getClass().getResource("/PlayerImage/d1.png");
@@ -99,7 +95,6 @@ public class Player extends Mob {
         }
     }
 
-    // Vẽ hình ảnh hoạt họa di chuyển, tên người chơi và thanh máu HP phía trên đầu Player
     @Override
     public void draw(Graphics2D g2d) {
         if (!survival) {
@@ -124,6 +119,7 @@ public class Player extends Mob {
             g2d.fillRect((int) x, (int) y, width, height);
         }
 
+        // Vẽ tên và thanh HP trên đầu Player
         g2d.setFont(new Font("Arial", Font.BOLD, 10));
 
         g2d.setColor(Color.YELLOW);
@@ -150,7 +146,6 @@ public class Player extends Mob {
         g2d.drawRect(barX, barY, barWidth, barHeight);
     }
 
-    // Xử lý sự kiện khi người chơi nhấn phím (di chuyển hoặc đặt bom)
     public void handleKeyPressed(KeyEvent e, List<Bomb> globalBombs) {
         int key = e.getKeyCode();
         if (key == KeyEvent.VK_W || key == KeyEvent.VK_UP)    { goUp = true; }
@@ -162,7 +157,6 @@ public class Player extends Mob {
         }
     }
 
-    // Xử lý sự kiện khi người chơi nhả phím di chuyển
     public void handleKeyReleased(KeyEvent e) {
         int key = e.getKeyCode();
         if (key == KeyEvent.VK_W || key == KeyEvent.VK_UP)    goUp = false;
@@ -175,10 +169,10 @@ public class Player extends Mob {
         }
     }
 
-    // Kiểm tra xem vị trí tọa độ tiếp theo của Player có hợp lệ hay không
     private boolean isValidPosition(double nextX, double nextY) {
         if (mapHash == null) return true;
 
+        // Thu nhỏ nhẹ hitbox (padding = 3) để dễ dàng lách qua khe hẹp
         int padding = 3;
         int leftTile = (int) ((nextX + padding) / TILE_SIZE);
         int rightTile = (int) ((nextX + width - padding - 1) / TILE_SIZE);
@@ -195,12 +189,11 @@ public class Player extends Mob {
         }
     }
 
-    // Kiểm tra giá trị của ô bản đồ xem Player có thể đi qua được không
     private boolean isWalkable(int tileValue) {
+        // Chỉ chặn tường gạch (1) và tường cố định (2). Cho phép đi qua đường trống (0) và các loại item (5-9)
         return tileValue != 1 && tileValue != 2 && tileValue != 4;
     }
 
-    // Cập nhật tọa độ di chuyển và hoạt họa của Player mỗi khung hình
     @Override
     public void update() {
         if (!survival) return;
@@ -235,7 +228,9 @@ public class Player extends Mob {
         }
     }
 
-    // Chia nhỏ bước đi từng pixel và hỗ trợ trượt góc mượt mà (corner sliding) khi vướng tường
+    /**
+     * Chia nhỏ bước đi từng pixel và hỗ trợ trượt góc mượt mà (corner sliding)
+     */
     private void moveWithSlide(int dx, int dy) {
         int steps = Math.max(Math.abs(dx), Math.abs(dy));
         int stepX = Integer.compare(dx, 0);
@@ -246,6 +241,7 @@ public class Player extends Mob {
                 x += stepX;
                 y += stepY;
             } else {
+                // Cơ chế trượt góc thông minh khi vướng tường
                 if (stepX != 0) {
                     if (isValidPosition(x + stepX, y - 1)) { y -= 1; x += stepX; }
                     else if (isValidPosition(x + stepX, y + 1)) { y += 1; x += stepX; }
@@ -258,7 +254,6 @@ public class Player extends Mob {
         }
     }
 
-    // Thực hiện thả bom tại vị trí của Player nếu chưa vượt quá giới hạn số lượng bom cho phép
     public void dropBomb(int[][] mapHash, List<Bomb> globalBombList) {
         long activeCount = globalBombList.stream()
                 .filter(Bomb::isActive)
@@ -278,7 +273,6 @@ public class Player extends Mob {
         }
     }
 
-    // Thiết lập hướng di chuyển hiện tại cho Player
     @Override
     public void move(Direction direction) {
         this.currentDirection = direction;
