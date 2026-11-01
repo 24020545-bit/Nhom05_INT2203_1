@@ -32,7 +32,7 @@ public class Player extends Mob {
     private String playerName = "Player";
 
     public Player(double startX, double startY, int[][] mapHash) {
-        super(startX, startY, PLAYER_WIDTH, PLAYER_HEIGHT, 2, 1, 3, 10, 1);
+        super(startX, startY, PLAYER_WIDTH, PLAYER_HEIGHT, 3, 1, 3, 10, 1);
         this.mapHash = mapHash;
         loadImages();
     }
@@ -191,7 +191,7 @@ public class Player extends Mob {
 
     private boolean isWalkable(int tileValue) {
         // Chỉ chặn tường gạch (1) và tường cố định (2). Cho phép đi qua đường trống (0) và các loại item (5-9)
-        return tileValue != 1 && tileValue != 2;
+        return tileValue != 1 && tileValue != 2 && tileValue != 4;
     }
 
     @Override
@@ -267,7 +267,7 @@ public class Player extends Mob {
                     .anyMatch(b -> b.isActive() && (int) b.getBounds().getX() == bombX && (int) b.getBounds().getY() == bombY);
 
             if (!alreadyHasBomb) {
-                Bomb newBomb = new Bomb(bombX, bombY, mapHash, this.power, this.attackPower);
+                Bomb newBomb = new Bomb(bombX, bombY, mapHash, globalBombList, this.power, this.attackPower);
                 globalBombList.add(newBomb);
             }
         }

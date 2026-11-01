@@ -15,27 +15,24 @@ public class GameFrame extends JFrame {
     private KeyBindScreen keyBindScreen;
     private LevelSelectScreen levelSelectScreen;
 
-    // Biến lưu trữ số lượng người chơi được chọn từ Cài đặt (Mặc định là 1 người chơi)
     private int playerCount = 1;
 
     public GameFrame() {
         utils.SaveManager.loadGame();
         setTitle("Bomberman Game");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+
         setSize(800, 600);
-        setLocationRelativeTo(null);
-        setResizable(false);
+        setResizable(true);
 
         cardLayout = new CardLayout();
         containerPanel = new JPanel(cardLayout);
 
-        // Khởi tạo các màn hình
         homeScreen = new HomeScreen(this);
         gameSettingScreen = new GameSettingScreen(this);
         keyBindScreen = new KeyBindScreen(this);
         levelSelectScreen = new LevelSelectScreen(this);
 
-        // Đưa các màn hình vào CardLayout
         containerPanel.add(homeScreen, "HOME");
         containerPanel.add(gameSettingScreen, "GAME_SETTING");
         containerPanel.add(keyBindScreen, "KEY_BIND");
@@ -43,38 +40,45 @@ public class GameFrame extends JFrame {
 
         add(containerPanel);
         cardLayout.show(containerPanel, "HOME");
+
+        setLocationRelativeTo(null);
     }
 
     public void showScreen(String name) {
-        // Nếu quay trở về màn hình chọn cửa ải, tiến hành vẽ lại (refresh) trạng thái các nút mở khóa
+        if (name.equals("LEVEL_SELECT") || name.equals("HOME") || name.equals("GAME_SETTING") || name.equals("KEY_BIND")) {
+            setSize(800, 600);
+            setLocationRelativeTo(null);
+        }
+
         if (name.equals("LEVEL_SELECT")) {
             levelSelectScreen.buildLevelButtons();
         }
         cardLayout.show(containerPanel, name);
     }
 
-    // --- CÁC HÀM GETTER/SETTER CHO SỐ LƯỢNG NGƯỜI CHƠI ---
     public int getPlayerCount() {
         return playerCount;
     }
 
     public void setPlayerCount(int playerCount) {
-        this.playerCount = Math.max(1, Math.min(2, playerCount)); // Giới hạn từ 1 đến 2 người
+        this.playerCount = Math.max(1, Math.min(2, playerCount));
     }
 
     public void startLevel(int levelIndex) {
-        // Tạo màn chơi GamePanel mới từ đầu, truyền kèm theo số lượng người chơi đã chọn
         GamePanel gamePanel = new GamePanel(this, levelIndex, playerCount);
         containerPanel.add(gamePanel, "GAME_PLAY_" + levelIndex);
         cardLayout.show(containerPanel, "GAME_PLAY_" + levelIndex);
+
+        gamePanel.adjustWindowSize();
         gamePanel.requestFocusInWindow();
     }
 
-    // Khởi tạo màn chơi khôi phục từ file save dở (truyền kèm properties và số lượng người chơi tương ứng)
     public void startLevelWithSave(int levelIndex, Properties saveProps) {
         GamePanel gamePanel = new GamePanel(this, levelIndex, playerCount, saveProps);
         containerPanel.add(gamePanel, "GAME_PLAY_" + levelIndex);
         cardLayout.show(containerPanel, "GAME_PLAY_" + levelIndex);
+
+        gamePanel.adjustWindowSize();
         gamePanel.requestFocusInWindow();
     }
 

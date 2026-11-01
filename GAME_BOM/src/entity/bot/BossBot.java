@@ -43,8 +43,11 @@ public class BossBot extends Mob {
     public void update() {
         if (!survival) return;
 
-        // 1. KIỂM TRA PHẠM VI 6 Ô VÀ ĐIỀU KIỆN TIÊU DIỆT HẾT MINION CŨ ĐỂ DÙNG SKILL TRIỆU HỒI
-        if (isPlayerInDetectionRange() && canSummonNewMinions()) {
+        // Xóa những minion đã chết khỏi danh sách theo dõi
+        summonedMinions.removeIf(minion -> !minion.isSurvival());
+
+        // 1. ĐIỀU KIỆN DÙNG SKILL: Phải trong phạm vi 6 ô, đã hết thời gian hồi chiêu VÀ tất cả minion cũ đã chết sạch
+        if (isPlayerInDetectionRange() && summonedMinions.isEmpty()) {
             long currentTime = System.currentTimeMillis();
             if (currentTime - lastAttackTime >= attackCooldown) {
                 summonKondoriaMinions();
@@ -71,14 +74,6 @@ public class BossBot extends Mob {
         }
 
         this.currentDirection = randomMovement.getCurrentDirection();
-    }
-
-    // Kiểm tra xem tất cả các minion triệu hồi ở đợt trước đã chết hết chưa
-    private boolean canSummonNewMinions() {
-        // Xóa những minion đã chết khỏi danh sách theo dõi
-        summonedMinions.removeIf(minion -> !minion.isSurvival());
-        // Chỉ được triệu hồi đợt mới khi danh sách trống (tất cả 4 con đã bị tiêu diệt)
-        return summonedMinions.isEmpty();
     }
 
     // Kiểm tra xem có người chơi nào nằm trong phạm vi 6 ô không
@@ -108,7 +103,7 @@ public class BossBot extends Mob {
     private void summonKondoriaMinions() {
         if (mapHash == null) return;
 
-        System.out.println("Boss triệu hồi 4 KondoriaBot mới (đợt cũ đã bị tiêu diệt hết)!");
+        System.out.println("Boss triệu hồi đợt KondoriaBot mới (đợt cũ đã bị tiêu diệt hết)!");
 
         // Lấy danh sách tất cả các Player đang sống trong game
         Player[] activePlayers = Mobs.MOBS.stream()

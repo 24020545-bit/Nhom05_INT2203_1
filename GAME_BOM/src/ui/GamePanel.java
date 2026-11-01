@@ -41,14 +41,15 @@ public class GamePanel extends JPanel {
     public GamePanel(GameFrame parentFrame, int levelIndex, int playerCount, Properties saveProps) {
         this.parentFrame = parentFrame;
         this.currentLevel = levelIndex;
-        this.playerCount = Math.clamp(playerCount, 1, 2); // Giới hạn từ 1 đến 2 người chơi
+        this.playerCount = Math.clamp(playerCount, 1, 2);
 
         setFocusable(true);
         setBackground(Color.DARK_GRAY);
-        setPreferredSize(new Dimension(800, 600));
 
         Mobs.MOBS.clear();
         gameMap = new GameMap();
+        gameMap.loadLevelMap(levelIndex);
+
         activeBombs = new ArrayList<>();
         activeItems = new ArrayList<>();
         players = new ArrayList<>();
@@ -72,7 +73,8 @@ public class GamePanel extends JPanel {
                     gameMap.setGrid(loadedGrid);
                 }
 
-                // Khôi phục danh sách người chơi từ save
+                adjustWindowSize();
+
                 int savedPlayerCount = Integer.parseInt(saveProps.getProperty("playerCount", "1"));
                 for (int i = 0; i < savedPlayerCount; i++) {
                     Player p = new Player(TILE_SIZE, TILE_SIZE, gameMap.getGrid());
@@ -86,7 +88,6 @@ public class GamePanel extends JPanel {
                     Mobs.add(p);
                 }
 
-                // Khôi phục Bot từ save
                 int botCount = Integer.parseInt(saveProps.getProperty("botCount", "0"));
                 Player[] activePlayersArray = players.toArray(new Player[0]);
                 for (int i = 0; i < botCount; i++) {
@@ -116,7 +117,6 @@ public class GamePanel extends JPanel {
             initDefaultGame(levelIndex, this.playerCount);
         }
 
-        // Tự động quét bản đồ (grid) để tạo Item từ các số 5 -> 9
         loadItemsFromGrid();
 
         addKeyListener(new KeyAdapter() {
@@ -156,7 +156,21 @@ public class GamePanel extends JPanel {
         gameTimer.start();
     }
 
-    // Phương thức quét mảng grid để khởi tạo Item từ file map (giá trị 5 -> 9)
+    /** Điều chỉnh kích thước cửa sổ vừa khít với bản đồ chơi và canh giữa tuyệt đối[cite: 1] */
+    public void adjustWindowSize() {
+        int mapWidthPixel = gameMap.getWidth() * TILE_SIZE;
+        int mapHeightPixel = gameMap.getHeight() * TILE_SIZE + 40;
+
+        Dimension dim = new Dimension(mapWidthPixel, mapHeightPixel);
+        setPreferredSize(dim);
+        setSize(dim);
+
+        if (parentFrame != null) {
+            parentFrame.pack();
+            parentFrame.setLocationRelativeTo(null); // Canh giữa màn hình[cite: 1]
+        }
+    }
+
     private void loadItemsFromGrid() {
         int[][] grid = gameMap.getGrid();
         for (int y = 0; y < grid.length; y++) {
@@ -178,7 +192,6 @@ public class GamePanel extends JPanel {
         }
     }
 
-    // Người chơi 1: W, A, S, D + SPACE (Đặt bom)
     private void handlePlayer1Input(KeyEvent e, boolean isPressed) {
         Player p1 = players.getFirst();
         int key = e.getKeyCode();
@@ -195,7 +208,6 @@ public class GamePanel extends JPanel {
         }
     }
 
-    // Người chơi 2: Các phím Mũi tên + ENTER (Đặt bom)
     private void handlePlayer2Input(KeyEvent e, boolean isPressed) {
         if (players.size() < 2) return;
         Player p2 = players.get(1);
@@ -226,6 +238,8 @@ public class GamePanel extends JPanel {
     }
 
     private void initDefaultGame(int levelIndex, int numPlayers) {
+        adjustWindowSize();
+
         double[][] spawnPositions = {
                 {TILE_SIZE, TILE_SIZE},
                 {(gameMap.getWidth() - 2) * TILE_SIZE, (gameMap.getHeight() - 2) * TILE_SIZE}
@@ -233,12 +247,24 @@ public class GamePanel extends JPanel {
 
         for (int i = 0; i < numPlayers; i++) {
             Player p = new Player(spawnPositions[i][0], spawnPositions[i][1], gameMap.getGrid());
-            p.setPlayerName("Player " + (i + 1)); // Gán tên P1, P2
+            p.setPlayerName("Player " + (i + 1));
             players.add(p);
             Mobs.add(p);
         }
 
         initBots(levelIndex, numPlayers);
+    }
+
+    private void spawnBot(String type, int tileX, int tileY, int speed, int hp, int power, long cooldown, Player target, Player[] allPlayers, int[][] grid) {
+        double x = tileX * TILE_SIZE;
+        double y = tileY * TILE_SIZE;
+        Mob bot = switch (type) {
+            case "Doll" -> new DollBot(x, y, TILE_SIZE, TILE_SIZE, speed, hp, power, cooldown, target, grid);
+            case "Kondoria" -> new KondoriaBot(x, y, TILE_SIZE, TILE_SIZE, speed, hp, power, cooldown, allPlayers, grid);
+            case "Boss" -> new BossBot(x, y, TILE_SIZE, TILE_SIZE, speed, hp, cooldown, grid);
+            default -> null;
+        };
+        if (bot != null) Mobs.add(bot);
     }
 
     private void initBots(int levelIndex, int numPlayers) {
@@ -249,70 +275,38 @@ public class GamePanel extends JPanel {
 
         switch (levelIndex) {
             case 1 -> {
-                Mobs.add(new DollBot(5 * TILE_SIZE, 3 * TILE_SIZE, TILE_SIZE, TILE_SIZE,
-                        (int)(1 * diff), (int)(2 * diff), (int)(1 * diff), (long)(1500 / diff),
-                        targetForDoll, gameMap.getGrid()));
+                spawnBot("Doll", 5, 3, (int)(1*diff), (int)(2*diff), (int)(1*diff), (long)(1500/diff), targetForDoll, activePlayersArray, gameMap.getGrid());
                 if (numPlayers >= 2) {
-                    Mobs.add(new DollBot(10 * TILE_SIZE, 5 * TILE_SIZE, TILE_SIZE, TILE_SIZE,
-                            (int)(1 * diff), (int)(2 * diff), (int)(1 * diff), (long)(1500 / diff),
-                            targetForDoll, gameMap.getGrid()));
+                    spawnBot("Doll", 10, 5, (int)(1*diff), (int)(2*diff), (int)(1*diff), (long)(1500/diff), targetForDoll, activePlayersArray, gameMap.getGrid());
                 }
             }
             case 2 -> {
-                Mobs.add(new DollBot(5 * TILE_SIZE, 3 * TILE_SIZE, TILE_SIZE, TILE_SIZE,
-                        (int)(1 * diff), (int)(3 * diff), (int)(1 * diff), (long)(1200 / diff),
-                        targetForDoll, gameMap.getGrid()));
-                Mobs.add(new KondoriaBot(7 * TILE_SIZE, 3 * TILE_SIZE, TILE_SIZE, TILE_SIZE,
-                        (int)(1 * diff), (int)(3 * diff), (int)(1 * diff), (long)(1000 / diff),
-                        activePlayersArray, gameMap.getGrid()));
+                spawnBot("Doll", 5, 3, (int)(1*diff), (int)(3*diff), (int)(1*diff), (long)(1200/diff), targetForDoll, activePlayersArray, gameMap.getGrid());
+                spawnBot("Kondoria", 7, 3, (int)(1*diff), (int)(3*diff), (int)(1*diff), (long)(1000/diff), targetForDoll, activePlayersArray, gameMap.getGrid());
                 if (numPlayers >= 2) {
-                    Mobs.add(new KondoriaBot(12 * TILE_SIZE, 7 * TILE_SIZE, TILE_SIZE, TILE_SIZE,
-                            (int)(1 * diff), (int)(3 * diff), (int)(1 * diff), (long)(1000 / diff),
-                            activePlayersArray, gameMap.getGrid()));
+                    spawnBot("Kondoria", 12, 7, (int)(1*diff), (int)(3*diff), (int)(1*diff), (long)(1000/diff), targetForDoll, activePlayersArray, gameMap.getGrid());
                 }
             }
             case 3 -> {
-                int baseBossHp = 25 + (numPlayers * 5);
-                Mobs.add(new BossBot(8 * TILE_SIZE, 5 * TILE_SIZE, TILE_SIZE, TILE_SIZE,
-                        (int)(1 * diff), (int)(baseBossHp * diff), (long)(6000 / diff),
-                        gameMap.getGrid()));
-                Mobs.add(new KondoriaBot(2 * TILE_SIZE, 2 * TILE_SIZE, TILE_SIZE, TILE_SIZE,
-                        (int)(1 * diff), (int)(4 * diff), (int)(1 * diff), (long)(800 / diff),
-                        activePlayersArray, gameMap.getGrid()));
+                int bossHp = (int)((25 + numPlayers * 5) * diff);
+                spawnBot("Boss", 8, 5, (int)(1*diff), bossHp, 0, (long)(6000/diff), targetForDoll, activePlayersArray, gameMap.getGrid());
+                spawnBot("Kondoria", 2, 2, (int)(1*diff), (int)(4*diff), (int)(1*diff), (long)(800/diff), targetForDoll, activePlayersArray, gameMap.getGrid());
             }
             case 4 -> {
-                Mobs.add(new DollBot(3 * TILE_SIZE, 3 * TILE_SIZE, TILE_SIZE, TILE_SIZE,
-                        (int)(2 * diff), (int)(4 * diff), (int)(1 * diff), (long)(900 / diff),
-                        targetForDoll, gameMap.getGrid()));
-                Mobs.add(new DollBot(12 * TILE_SIZE, 8 * TILE_SIZE, TILE_SIZE, TILE_SIZE,
-                        (int)(2 * diff), (int)(4 * diff), (int)(1 * diff), (long)(900 / diff),
-                        targetForDoll, gameMap.getGrid()));
-                Mobs.add(new KondoriaBot(8 * TILE_SIZE, 4 * TILE_SIZE, TILE_SIZE, TILE_SIZE,
-                        (int)(1 * diff), (int)(6 * diff), (int)(1 * diff), (long)(700 / diff),
-                        activePlayersArray, gameMap.getGrid()));
+                spawnBot("Doll", 3, 3, (int)(2*diff), (int)(4*diff), (int)(1*diff), (long)(900/diff), targetForDoll, activePlayersArray, gameMap.getGrid());
+                spawnBot("Doll", 12, 8, (int)(2*diff), (int)(4*diff), (int)(1*diff), (long)(900/diff), targetForDoll, activePlayersArray, gameMap.getGrid());
+                spawnBot("Kondoria", 8, 4, (int)(1*diff), (int)(6*diff), (int)(1*diff), (long)(700/diff), targetForDoll, activePlayersArray, gameMap.getGrid());
             }
             case 5 -> {
-                int bossHp = 35 + (numPlayers * 5);
-                Mobs.add(new BossBot(10 * TILE_SIZE, 5 * TILE_SIZE, TILE_SIZE, TILE_SIZE,
-                        (int)(1 * diff), (int)(bossHp * diff), (long)(5000 / diff),
-                        gameMap.getGrid()));
-                Mobs.add(new KondoriaBot(4 * TILE_SIZE, 3 * TILE_SIZE, TILE_SIZE, TILE_SIZE,
-                        (int)(1 * diff), (int)(6 * diff), (int)(1 * diff), (long)(600 / diff),
-                        activePlayersArray, gameMap.getGrid()));
-                Mobs.add(new KondoriaBot(15 * TILE_SIZE, 8 * TILE_SIZE, TILE_SIZE, TILE_SIZE,
-                        (int)(1 * diff), (int)(6 * diff), (int)(1 * diff), (long)(600 / diff),
-                        activePlayersArray, gameMap.getGrid()));
+                int bossHp = (int)((35 + numPlayers * 5) * diff);
+                spawnBot("Boss", 10, 5, (int)(1*diff), bossHp, 0, (long)(5000/diff), targetForDoll, activePlayersArray, gameMap.getGrid());
+                spawnBot("Kondoria", 4, 3, (int)(1*diff), (int)(6*diff), (int)(1*diff), (long)(600/diff), targetForDoll, activePlayersArray, gameMap.getGrid());
+                spawnBot("Kondoria", 15, 8, (int)(1*diff), (int)(6*diff), (int)(1*diff), (long)(600/diff), targetForDoll, activePlayersArray, gameMap.getGrid());
             }
             default -> {
-                Mobs.add(new DollBot(3 * TILE_SIZE, 3 * TILE_SIZE, TILE_SIZE, TILE_SIZE,
-                        (int)(2 * diff), (int)(6 * diff), (int)(1 * diff), (long)(700 / diff),
-                        targetForDoll, gameMap.getGrid()));
-                Mobs.add(new KondoriaBot(10 * TILE_SIZE, 8 * TILE_SIZE, TILE_SIZE, TILE_SIZE,
-                        (int)(2 * diff), (int)(10 * diff), (int)(1 * diff), (long)(400 / diff),
-                        activePlayersArray, gameMap.getGrid()));
-                Mobs.add(new BossBot(11 * TILE_SIZE, 5 * TILE_SIZE, TILE_SIZE, TILE_SIZE,
-                        (int)(1 * diff), (int)(55 * diff), (long)(3500 / diff),
-                        gameMap.getGrid()));
+                spawnBot("Doll", 3, 3, (int)(2*diff), (int)(6*diff), (int)(1*diff), (long)(700/diff), targetForDoll, activePlayersArray, gameMap.getGrid());
+                spawnBot("Kondoria", 10, 8, (int)(2*diff), (int)(10*diff), (int)(1*diff), (long)(400/diff), targetForDoll, activePlayersArray, gameMap.getGrid());
+                spawnBot("Boss", 11, 5, (int)(1*diff), (int)(55*diff), 0, (long)(3500/diff), targetForDoll, activePlayersArray, gameMap.getGrid());
             }
         }
     }
@@ -374,7 +368,18 @@ public class GamePanel extends JPanel {
         super.paintComponent(g);
         Graphics2D g2d = (Graphics2D) g;
 
-        // Gọi trực tiếp hàm vẽ map từ lớp GameMap
+        // Tính toán tọa độ để căn giữa bản đồ trong khung hình
+        int mapWidthPixel = gameMap.getWidth() * TILE_SIZE;
+        int mapHeightPixel = gameMap.getHeight() * TILE_SIZE;
+        int panelWidth = getWidth();
+        int panelHeight = getHeight();
+
+        int offsetX = Math.max(0, (panelWidth - mapWidthPixel) / 2);
+        int offsetY = Math.max(0, (panelHeight - mapHeightPixel) / 2);
+
+        // Dịch chuyển hệ tọa độ để map nằm chính giữa
+        g2d.translate(offsetX, offsetY);
+
         gameMap.draw(g2d);
 
         for (Item item : activeItems) {
@@ -388,6 +393,9 @@ public class GamePanel extends JPanel {
         for (Mob mob : Mobs.MOBS) {
             mob.draw(g2d);
         }
+
+        // Trả lại hệ tọa độ gốc để vẽ thanh thông tin (HUD) cố định ở góc trên bên trái
+        g2d.translate(-offsetX, -offsetY);
 
         g2d.setColor(Color.WHITE);
         g2d.setFont(new Font("Arial", Font.BOLD, 13));

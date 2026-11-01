@@ -16,15 +16,14 @@ public class GameMap {
     public static final int WALL_BRICK = 1;
     public static final int WALL_SOLID = 2;
 
-    private static final int TILE_SIZE = 32; // Kích thước chuẩn cho mỗi ô
+    private static final int TILE_SIZE = 32;
 
     private final List<int[][]> mapList;
-    private int[][] currentGrid; // Lưới bản đồ đang được sử dụng cho màn chơi hiện tại
+    private int[][] currentGrid;
 
-    // Các biến chứa ảnh môi trường
-    private Image wall0Img; // Đường trống (EMPTY)
-    private Image wall1Img; // Tường gạch phá hủy được (WALL_BRICK)
-    private Image wall2Img; // Tường cố định (WALL_SOLID)
+    private Image wall0Img;
+    private Image wall1Img;
+    private Image wall2Img;
 
     public GameMap() {
         mapList = new ArrayList<>();
@@ -43,10 +42,32 @@ public class GameMap {
             mapList.add(parseStringToMap(defaultMap));
         }
 
-        // Mặc định gán grid đầu tiên cho bản đồ hiện tại
         if (!mapList.isEmpty()) {
             this.currentGrid = mapList.get(0);
         }
+    }
+
+    /**
+     * Tải bản đồ theo Cửa ải (Level):
+     * - Cửa ải 1, 2 dùng Map 1 (Index 0)
+     * - Cửa ải 3, 4 dùng Map 2 (Index 1)
+     * - Cửa ải 5, 6... dùng Map 3 (Index 2)
+     */
+    public void loadLevelMap(int levelIndex) {
+        if (mapList.isEmpty()) return;
+
+        int mapIndex = switch (levelIndex) {
+            case 1, 2 -> 0; // Map 1
+            case 3, 4 -> 1; // Map 2
+            default -> 2;   // Map 3 (Level 5, 6...)
+        };
+
+        // Đảm bảo không bị vượt quá số lượng map đọc từ file map.txt
+        if (mapIndex >= mapList.size()) {
+            mapIndex = mapList.size() - 1;
+        }
+
+        this.currentGrid = mapList.get(mapIndex);
     }
 
     private void loadMapImages() {
@@ -72,7 +93,7 @@ public class GameMap {
                     .getResourceAsStream("map.txt");
 
             if (is == null) {
-                return; // Không tìm thấy file map.txt thì bỏ qua
+                return;
             }
 
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(is))) {
@@ -153,14 +174,11 @@ public class GameMap {
         return getGrid().length;
     }
 
-    // Phương thức gán trực tiếp mảng grid khi load game save dở
     public void setGrid(int[][] loadedGrid) {
         this.currentGrid = loadedGrid;
     }
 
-    /**
-     * Phương thức vẽ bản đồ bằng hình ảnh theo đúng đường dẫn thư mục
-     */
+    /** Phương thức vẽ bản đồ bằng hình ảnh */
     public void draw(Graphics2D g2d) {
         int[][] grid = getGrid();
         for (int y = 0; y < getHeight(); y++) {
@@ -168,14 +186,13 @@ public class GameMap {
                 int tile = grid[y][x];
                 Image tileImg = null;
 
-                // Các ô chứa item (5 -> 9) hiển thị nền đất trống (dùng wall0)
                 if (tile >= 5 && tile <= 9) {
                     tileImg = wall0Img;
                 } else {
                     switch (tile) {
-                        case WALL_BRICK -> tileImg = wall1Img; // Tường gạch
-                        case WALL_SOLID -> tileImg = wall2Img; // Tường cố định
-                        default -> tileImg = wall0Img;         // Đường trống (EMPTY)
+                        case WALL_BRICK -> tileImg = wall1Img;
+                        case WALL_SOLID -> tileImg = wall2Img;
+                        default -> tileImg = wall0Img;
                     }
                 }
 
