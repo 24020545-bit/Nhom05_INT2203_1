@@ -11,9 +11,10 @@ import java.awt.Image;
 import javax.swing.ImageIcon;
 
 public class KondoriaBot extends Mob {
-    private Player[] players; // Mảng chứa các người chơi (Player 1, Player 2,...)
+    private Player[] players;
     private int[][] mapHash;
     private final int TILE_SIZE = 32;
+
     private double moveHori = 0;
     private double moveVerti = 0;
 
@@ -25,9 +26,9 @@ public class KondoriaBot extends Mob {
     private static final long HIT_STUN_DURATION = 500;
 
     private RandomMovement randomMovement;
-    private Player currentTarget = null; // Người chơi đang bị đuổi theo hiện tại
+    private Player currentTarget = null;
 
-    // Tài nguyên hình ảnh
+    // Hình ảnh
     private Image leftImg;
     private Image rightImg;
     private Image dameImg;
@@ -36,7 +37,6 @@ public class KondoriaBot extends Mob {
     private int animIndex = 0;
     private int animTimer = 0;
 
-    // Constructor hỗ trợ nhiều người chơi
     public KondoriaBot(double x, double y, int width, int height, int speed, int hp, int attackPower, long attackCooldown, Player[] players, int[][] mapHash) {
         super(x, y, width, height, speed, 0, 0, hp, attackPower);
         this.players = players;
@@ -61,7 +61,7 @@ public class KondoriaBot extends Mob {
             deadImgs[0] = (dead1 != null) ? new ImageIcon(dead1).getImage() : null;
             deadImgs[1] = (dead2 != null) ? new ImageIcon(dead2).getImage() : null;
         } catch (Exception e) {
-            System.err.println("Lỗi khi tải ảnh KondoriaBot: " + e.getMessage());
+            System.err.println("Lỗi tải ảnh KondoriaBot: " + e.getMessage());
         }
     }
 
@@ -69,22 +69,9 @@ public class KondoriaBot extends Mob {
     public void update() {
         if (!survival) return;
 
-        // Kiểm tra va chạm và tấn công bất kỳ Player nào đang sống
-        if (players != null) {
-            long currentTime = System.currentTimeMillis();
-            for (Player player : players) {
-                if (player != null && player.isSurvival()) {
-                    if (this.getBounds().intersects(player.getBounds())) {
-                        if (currentTime - lastAttackTime >= attackCooldown) {
-                            player.takeDamage(this.attackPower);
-                            lastAttackTime = currentTime;
-                        }
-                    }
-                }
-            }
-        }
-
+        checkPlayerCollision();
         moveEnemy();
+        clampToBounds(); // Luôn chặn biên để bot không bao giờ ra ngoài map
 
         animTimer++;
         if (animTimer > 10) {
@@ -93,152 +80,164 @@ public class KondoriaBot extends Mob {
         }
     }
 
+    // 1. Kiểm tra va chạm với người chơi để gây sát thương
+    private void checkPlayerCollision() {
+        if (players == null) return;
+        long currentTime = System.currentTimeMillis();
+        for (Player player : players) {
+            if (player != null && player.isSurvival()) {
+                if (this.getBounds().intersects(player.getBounds())) {
+                    if (currentTime - lastAttackTime >= attackCooldown) {
+                        player.takeDamage(this.attackPower);
+                        lastAttackTime = currentTime;
+                    }
+                }
+            }
+        }
+    }
+
+    // 2. Hàm cố định tọa độ bot không được vượt quá kích thước bản đồ
+    private void clampToBounds() {
+        if (mapHash != null && mapHash.length > 0 && mapHash[0].length > 0) {
+            double minX = 0;
+            double minY = 0;
+            double maxX = (mapHash[0].length * TILE_SIZE) - width;
+            double maxY = (mapHash.length * TILE_SIZE) - height;
+
+            if (x < minX) x = minX;
+            if (x > maxX) x = maxX;
+            if (y < minY) y = minY;
+            if (y > maxY) y = maxY;
+        }
+    }
+
+    // 3. Logic di chuyển chính của bot
     private void moveEnemy() {
         if (players == null) return;
 
         long currentTime = System.currentTimeMillis();
-
         if (currentTime - lastAttackTime < HIT_STUN_DURATION) {
             moveHori = 0;
             moveVerti = 0;
             return;
         }
 
-        int j = (int) ((x + width / 2.0) / TILE_SIZE);
-        int i = (int) ((y + height / 2.0) / TILE_SIZE);
+        int currentTileX = (int) ((x + width / 2.0) / TILE_SIZE);
+        int currentTileY = (int) ((y + height / 2.0) / TILE_SIZE);
 
-        // --- TÌM XEM CÓ PLAYER NÀO TRONG PHẠM VI KHÔNG ---
+        // Tìm người chơi gần nhất trong phạm vi phát hiện
+        findClosestTarget(currentTileX, currentTileY);
+
+        if (currentTarget != null) {
+            // --- TRẠNG THÁI: ĐUỔI THEO NGƯỜI CHƠI (ĐI XUYÊN TƯỜNG) ---
+            isEscapingWall = false;
+
+            int targetTileX = (int) ((currentTarget.getX() + currentTarget.getWidth() / 2.0) / TILE_SIZE);
+            int targetTileY = (int) ((currentTarget.getY() + currentTarget.getHeight() / 2.0) / TILE_SIZE);
+
+            if (moveHori == 0 && moveVerti == 0) {
+                updateDirectionAndSpeed(targetTileX, targetTileY, currentTileX, currentTileY);
+            }
+
+            if (Math.abs(currentTileX * TILE_SIZE - x) < speed && Math.abs(currentTileY * TILE_SIZE - y) < speed) {
+                x = currentTileX * TILE_SIZE;
+                y = currentTileY * TILE_SIZE;
+                moveHori = 0;
+                moveVerti = 0;
+                updateDirectionAndSpeed(targetTileX, targetTileY, currentTileX, currentTileY);
+            }
+
+            x += moveHori;
+            y += moveVerti;
+
+        } else {
+            // --- TRẠNG THÁI: MẤT MỤC TIÊU / ĐI NGẪU NHIÊN ---
+            handleRandomOrEscapeMovement(currentTileX, currentTileY);
+        }
+    }
+
+    // Tìm kiếm Player trong phạm vi CHASE_RADIUS
+    private void findClosestTarget(int j, int i) {
         currentTarget = null;
         for (Player p : players) {
             if (p != null && p.isSurvival()) {
                 int jp = (int) ((p.getX() + p.getWidth() / 2.0) / TILE_SIZE);
                 int ip = (int) ((p.getY() + p.getHeight() / 2.0) / TILE_SIZE);
 
-                int distanceX = Math.abs(jp - j);
-                int distanceY = Math.abs(ip - i);
-
-                if (distanceX <= CHASE_RADIUS && distanceY <= CHASE_RADIUS) {
-                    currentTarget = p; // Phát hiện ra player này, gán làm mục tiêu và đuổi theo
+                if (Math.abs(jp - j) <= CHASE_RADIUS && Math.abs(ip - i) <= CHASE_RADIUS) {
+                    currentTarget = p;
                     break;
                 }
             }
         }
+    }
 
-        if (currentTarget != null) {
-            // Khi phát hiện người chơi, hủy trạng thái thoát tường đang chạy dở (nếu có) để quay lại đuổi
-            isEscapingWall = false;
+    // Cập nhật hướng và vận tốc bám theo mục tiêu
+    private void updateDirectionAndSpeed(int targetX, int targetY, int curX, int curY) {
+        if (targetX != curX) {
+            moveHori = (targetX < curX) ? -speed : speed;
+            currentDirection = (targetX < curX) ? Direction.LEFT : Direction.RIGHT;
+        }
+        if (targetY != curY) {
+            moveVerti = (targetY < curY) ? -speed : speed;
+            currentDirection = (targetY < curY) ? Direction.UP : Direction.DOWN;
+        }
 
-            // --- TRẠNG THÁI ĐUỔI THEO & ĐI XUYÊN TƯỜNG (PHÁT HIỆN PLAYER) ---
-            int jp = (int) ((currentTarget.getX() + currentTarget.getWidth() / 2.0) / TILE_SIZE);
-            int ip = (int) ((currentTarget.getY() + currentTarget.getHeight() / 2.0) / TILE_SIZE);
-
-            if (moveHori == 0 && moveVerti == 0) {
-                if (jp != j) {
-                    moveHori = (jp < j) ? -speed : speed;
-                    currentDirection = (jp < j) ? Direction.LEFT : Direction.RIGHT;
-                } else if (ip != i) {
-                    moveVerti = (ip < i) ? -speed : speed;
-                    currentDirection = (ip < i) ? Direction.UP : Direction.DOWN;
-                }
-            }
-
-            if (Math.abs(j * TILE_SIZE - x) < speed && Math.abs(i * TILE_SIZE - y) < speed) {
-                x = j * TILE_SIZE;
-                y = i * TILE_SIZE;
-
+        if (moveVerti != 0 && moveHori != 0) {
+            if (Math.abs(targetY - curY) > Math.abs(targetX - curX)) {
                 moveHori = 0;
+            } else {
                 moveVerti = 0;
+            }
+        }
+    }
 
-                if (jp != j) {
-                    moveHori = (jp < j) ? -speed : speed;
-                    currentDirection = (jp < j) ? Direction.LEFT : Direction.RIGHT;
-                }
-                if (ip != i) {
-                    moveVerti = (ip < i) ? -speed : speed;
-                    currentDirection = (ip < i) ? Direction.UP : Direction.DOWN;
-                }
-
-                if (moveVerti != 0 && moveHori != 0) {
-                    if (Math.abs(ip - i) > Math.abs(jp - j)) {
-                        moveHori = 0;
-                    } else {
-                        moveVerti = 0;
+    // Xử lý khi đi ngẫu nhiên hoặc trượt thoát khỏi tường
+    private void handleRandomOrEscapeMovement(int j, int i) {
+        if (!randomMovement.isValidPosition(x, y) && !isEscapingWall) {
+            for (int r = 1; r <= 3; r++) {
+                double[][] candidates = {
+                        { (j + r) * TILE_SIZE, i * TILE_SIZE },
+                        { (j - r) * TILE_SIZE, i * TILE_SIZE },
+                        { j * TILE_SIZE, (i + r) * TILE_SIZE },
+                        { j * TILE_SIZE, (i - r) * TILE_SIZE }
+                };
+                for (double[] coord : candidates) {
+                    if (randomMovement.isValidPosition(coord[0], coord[1])) {
+                        targetX = coord[0];
+                        targetY = coord[1];
+                        isEscapingWall = true;
+                        break;
                     }
                 }
+                if (isEscapingWall) break;
             }
+        }
 
-            // Đi xuyên tường khi đuổi theo mục tiêu
-            x += moveHori;
-            y += moveVerti;
+        if (isEscapingWall) {
+            double dx = targetX - x;
+            double dy = targetY - y;
+            double dist = Math.sqrt(dx * dx + dy * dy);
 
-            // === CHẶN BIÊN MAP ===
-            if (mapHash != null) {
-                double minX = 0;
-                double minY = 0;
-                double maxX = (mapHash[0].length * TILE_SIZE) - width;
-                double maxY = (mapHash.length * TILE_SIZE) - height;
-
-                if (x < minX) x = minX;
-                if (x > maxX) x = maxX;
-                if (y < minY) y = minY;
-                if (y > maxY) y = maxY;
+            if (dist <= speed) {
+                x = targetX;
+                y = targetY;
+                isEscapingWall = false;
+            } else {
+                x += (dx / dist) * speed;
+                y += (dy / dist) * speed;
             }
-
-        } else {
-            // --- TRẠNG THÁI MẤT MỤC TIÊU / ĐI NGẪU NHIÊN ---
-
-            // 1. Nếu bot đang ở trong tường và chưa thiết lập điểm trượt thoát ra
-            if (!randomMovement.isValidPosition(x, y) && !isEscapingWall) {
-                for (int r = 1; r <= 3; r++) {
-                    double[][] candidateCoords = {
-                            { (j + r) * TILE_SIZE, i * TILE_SIZE },
-                            { (j - r) * TILE_SIZE, i * TILE_SIZE },
-                            { j * TILE_SIZE, (i + r) * TILE_SIZE },
-                            { j * TILE_SIZE, (i - r) * TILE_SIZE },
-                            { (j + r) * TILE_SIZE, (i + r) * TILE_SIZE },
-                            { (j - r) * TILE_SIZE, (i - r) * TILE_SIZE }
-                    };
-                    for (double[] coord : candidateCoords) {
-                        if (randomMovement.isValidPosition(coord[0], coord[1])) {
-                            targetX = coord[0];
-                            targetY = coord[1];
-                            isEscapingWall = true;
-                            break;
-                        }
-                    }
-                    if (isEscapingWall) break;
-                }
-            }
-
-            // 2. Nếu đang trong quá trình trượt từ từ ra khỏi tường (không tốc biến)
-            if (isEscapingWall) {
-                double dx = targetX - x;
-                double dy = targetY - y;
-                double dist = Math.sqrt(dx * dx + dy * dy);
-
-                if (dist <= speed) {
-                    // Đã trượt đến đích gần nhất
-                    x = targetX;
-                    y = targetY;
-                    isEscapingWall = false; // Hoàn tất thoát tường
-                } else {
-                    // Dịch chuyển từng bước nhỏ bằng đúng giá trị speed hướng về ô trống
-                    x += (dx / dist) * speed;
-                    y += (dy / dist) * speed;
-                }
-                moveHori = 0;
-                moveVerti = 0;
-                return; // Tạm dừng chuyển sang random cho tới khi thoát hẳn ra ngoài
-            }
-
-            // 3. Khi đã đứng ở ô trống an toàn, chuyển giao cho bộ đi ngẫu nhiên bám lưới
-            randomMovement.update(x, y);
-            this.x = randomMovement.getX();
-            this.y = randomMovement.getY();
-            this.currentDirection = randomMovement.getCurrentDirection();
             moveHori = 0;
             moveVerti = 0;
+            return;
         }
+
+        randomMovement.update(x, y);
+        this.x = randomMovement.getX();
+        this.y = randomMovement.getY();
+        this.currentDirection = randomMovement.getCurrentDirection();
+        moveHori = 0;
+        moveVerti = 0;
     }
 
     @Override
@@ -258,7 +257,6 @@ public class KondoriaBot extends Mob {
             return;
         }
 
-        // Chọn ảnh theo hướng di chuyển (trái/phải)
         Image currentImg = (currentDirection == Direction.LEFT) ? leftImg : rightImg;
         if (currentImg == null) {
             currentImg = (leftImg != null) ? leftImg : rightImg;

@@ -334,10 +334,8 @@ public class GamePanel extends JPanel {
             Mob m = Mobs.MOBS.get(i);
             if (!m.isSurvival()) {
                 if (m instanceof Player) {
-                    // Phát âm thanh khi người chơi chết
                     SoundManager.playSoundEffect("/audio/dead1.wav");
                 } else {
-                    // Phát âm thanh khi Bot/Quái chết
                     SoundManager.playSoundEffect("/audio/dead1.wav");
                 }
                 Mobs.MOBS.remove(i);
@@ -364,6 +362,9 @@ public class GamePanel extends JPanel {
                 LevelSelectScreen.unlockNextLevel(currentLevel);
                 SaveManager.clearSaveFile();
 
+                // PHÁT ÂM THANH CHIẾN THẮNG / QUA MÀN
+                SoundManager.playSoundEffect("/audio/quaman.wav"); // Bạn có thể đổi thành "/audio/win.wav" nếu có file riêng
+
                 JOptionPane.showMessageDialog(this, "Chúc mừng! Đội của bạn đã vượt qua Cửa ải " + currentLevel + "!", "Chiến Thắng!", JOptionPane.INFORMATION_MESSAGE);
                 parentFrame.showScreen("LEVEL_SELECT");
             }
@@ -372,7 +373,7 @@ public class GamePanel extends JPanel {
             gameTimer.stop();
             SaveManager.clearSaveFile();
 
-            // PHÁT ÂM THANH GAME OVER KHI TẤT CẢ NGƯỜI CHƠI THỬA CUỘC
+            // PHÁT ÂM THANH GAME OVER KHI THUA CUỘC
             SoundManager.playSoundEffect("/audio/dead2.wav");
 
             JOptionPane.showMessageDialog(this, "Tất cả người chơi đã hy sinh! Trò chơi kết thúc.", "Thua Cuộc", JOptionPane.ERROR_MESSAGE);
