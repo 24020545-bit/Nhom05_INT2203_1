@@ -11,7 +11,7 @@ import java.awt.Image;
 import javax.swing.ImageIcon;
 
 public class KondoriaBot extends Mob {
-    private Player[] players; // Mảng chứa các người chơi (Player 1, Player 2,...)
+    private Player[] players;
     private int[][] mapHash;
     private final int TILE_SIZE = 32;
     private double moveHori = 0;
@@ -21,9 +21,8 @@ public class KondoriaBot extends Mob {
     private static final long HIT_STUN_DURATION = 500;
 
     private RandomMovement randomMovement;
-    private Player currentTarget = null; // Người chơi đang bị đuổi theo hiện tại
+    private Player currentTarget = null;
 
-    // Tài nguyên hình ảnh
     private Image leftImg;
     private Image rightImg;
     private Image dameImg;
@@ -32,7 +31,7 @@ public class KondoriaBot extends Mob {
     private int animIndex = 0;
     private int animTimer = 0;
 
-    // Constructor hỗ trợ nhiều người chơi
+    // Khởi tạo KondoriaBot hỗ trợ nhiều người chơi và khả năng đi xuyên tường
     public KondoriaBot(double x, double y, int width, int height, int speed, int hp, int attackPower, long attackCooldown, Player[] players, int[][] mapHash) {
         super(x, y, width, height, speed, 0, 0, hp, attackPower);
         this.players = players;
@@ -43,6 +42,7 @@ public class KondoriaBot extends Mob {
         loadImages();
     }
 
+    // Tải các tệp hình ảnh đồ họa di chuyển và trạng thái chết cho KondoriaBot
     private void loadImages() {
         try {
             var l = getClass().getResource("/Bot/KondoriaBot/left.png");
@@ -61,11 +61,11 @@ public class KondoriaBot extends Mob {
         }
     }
 
+    // Cập nhật trạng thái vòng đời, kiểm tra va chạm tấn công Player và xử lý logic di chuyển mỗi frame
     @Override
     public void update() {
         if (!survival) return;
 
-        // Kiểm tra va chạm và tấn công bất kỳ Player nào đang sống
         if (players != null) {
             long currentTime = System.currentTimeMillis();
             for (Player player : players) {
@@ -89,6 +89,7 @@ public class KondoriaBot extends Mob {
         }
     }
 
+    // Xử lý logic di chuyển: đuổi theo mục tiêu khi ở trong bán kính quét hoặc di chuyển ngẫu nhiên
     private void moveEnemy() {
         if (players == null) return;
 
@@ -103,7 +104,6 @@ public class KondoriaBot extends Mob {
         int j = (int) ((x + width / 2.0) / TILE_SIZE);
         int i = (int) ((y + height / 2.0) / TILE_SIZE);
 
-        // --- TÌM XEM CÓ PLAYER NÀO TRONG PHẠM VI KHÔNG ---
         currentTarget = null;
         for (Player p : players) {
             if (p != null && p.isSurvival()) {
@@ -114,14 +114,13 @@ public class KondoriaBot extends Mob {
                 int distanceY = Math.abs(ip - i);
 
                 if (distanceX <= CHASE_RADIUS && distanceY <= CHASE_RADIUS) {
-                    currentTarget = p; // Phát hiện ra player này, gán làm mục tiêu và đuổi theo
+                    currentTarget = p;
                     break;
                 }
             }
         }
 
         if (currentTarget != null) {
-            // --- TRẠNG THÁI ĐUỔI THEO & ĐI XUYÊN TƯỜNG (PHÁT HIỆN PLAYER BẤT KỲ) ---
             int jp = (int) ((currentTarget.getX() + currentTarget.getWidth() / 2.0) / TILE_SIZE);
             int ip = (int) ((currentTarget.getY() + currentTarget.getHeight() / 2.0) / TILE_SIZE);
 
@@ -160,12 +159,10 @@ public class KondoriaBot extends Mob {
                 }
             }
 
-            // Đi xuyên tường khi đuổi theo mục tiêu
             x += moveHori;
             y += moveVerti;
 
         } else {
-            // --- TRẠNG THÁI DI CHUYỂN NGẪU NHIÊN (KHÔNG PHÁT HIỆN AI, CÓ CHECK TƯỜNG) ---
             randomMovement.update(x, y);
             this.x = randomMovement.getX();
             this.y = randomMovement.getY();
@@ -175,11 +172,13 @@ public class KondoriaBot extends Mob {
         }
     }
 
+    // Cập nhật hướng di chuyển hiện tại của KondoriaBot
     @Override
     public void move(Direction direction) {
         this.currentDirection = direction;
     }
 
+    // Vẽ hình ảnh sprite hoặc khối màu đại diện cho KondoriaBot và hiệu ứng lúc chết lên màn hình
     @Override
     public void draw(Graphics2D g2d) {
         if (!survival && !deading) return;
@@ -192,7 +191,6 @@ public class KondoriaBot extends Mob {
             return;
         }
 
-        // Chọn ảnh theo hướng di chuyển (trái/phải)
         Image currentImg = (currentDirection == Direction.LEFT) ? leftImg : rightImg;
         if (currentImg == null) {
             currentImg = (leftImg != null) ? leftImg : rightImg;

@@ -24,6 +24,7 @@ public class DollBot extends Mob {
     private int animIndex = 0;
     private int animTimer = 0;
 
+    // Khởi tạo DollBot với các thông số vị trí, kích thước, tốc độ, máu, sát thương và mục tiêu
     public DollBot(double x, double y, int width, int height, int speed, int hp, int attackPower, long attackCooldown, Player targetPlayer, int[][] mapHash) {
         super(x, y, width, height, 1, speed, 0, hp, attackPower);
         this.targetPlayer = targetPlayer;
@@ -34,6 +35,7 @@ public class DollBot extends Mob {
         loadImages();
     }
 
+    // Tải các tài nguyên hình ảnh (di chuyển, sát thương, trạng thái chết) cho DollBot từ thư mục tài nguyên
     private void loadImages() {
         try {
             var l = getClass().getResource("/Bot/DollBot/left.png");
@@ -52,6 +54,7 @@ public class DollBot extends Mob {
         }
     }
 
+    // Cập nhật trạng thái, kiểm tra va chạm gây sát thương người chơi và chuyển động ngẫu nhiên của DollBot mỗi khung hình
     @Override
     public void update() {
         if (!survival) return;
@@ -78,11 +81,13 @@ public class DollBot extends Mob {
         }
     }
 
+    // Cập nhật hướng di chuyển hiện tại cho DollBot
     @Override
     public void move(Direction direction) {
         this.currentDirection = direction;
     }
 
+    // Vẽ hình ảnh hoạt họa hoặc hình khối dự phòng của DollBot lên khung hình game
     @Override
     public void draw(Graphics2D g2d) {
         if (!survival && !deading) return;
@@ -95,7 +100,6 @@ public class DollBot extends Mob {
             return;
         }
 
-        // Chọn ảnh theo hướng di chuyển (trái/phải)
         Image currentImg = rightImg;
         if (currentDirection == Direction.LEFT) {
             currentImg = (leftImg != null) ? leftImg : rightImg;
@@ -106,7 +110,6 @@ public class DollBot extends Mob {
         if (currentImg != null) {
             g2d.drawImage(currentImg, (int) x, (int) y, width, height, null);
         } else {
-            // Fallback vẽ hình chữ nhật nếu chưa có ảnh
             g2d.setColor(new Color(219, 112, 147));
             g2d.fillRect((int) x, (int) y, width, height);
             g2d.setColor(Color.BLACK);
