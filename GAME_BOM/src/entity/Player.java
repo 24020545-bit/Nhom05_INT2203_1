@@ -29,7 +29,6 @@ public class Player extends Mob {
     private int animIndex = 0;
     private int animTimer = 0;
 
-    // Thêm tên hiển thị cho người chơi (VD: "P1", "P2")
     private String playerName = "Player";
 
     public Player(double startX, double startY, int[][] mapHash) {
@@ -120,26 +119,22 @@ public class Player extends Mob {
             g2d.fillRect((int) x, (int) y, width, height);
         }
 
-        // --- VẼ TÊN VÀ THANH HP TRÊN ĐẦU PLAYER ---
+        // Vẽ tên và thanh HP trên đầu Player
         g2d.setFont(new Font("Arial", Font.BOLD, 10));
 
-        // 1. Vẽ tên Player
         g2d.setColor(Color.YELLOW);
         g2d.drawString(playerName, (int) x - 2, (int) y - 12);
 
-        // 2. Vẽ thanh HP (thanh máu nhỏ)
         int barWidth = width;
         int barHeight = 4;
         int barX = (int) x;
         int barY = (int) y - 8;
 
-        // Nền thanh HP (màu đỏ tối)
         g2d.setColor(new Color(100, 0, 0));
         g2d.fillRect(barX, barY, barWidth, barHeight);
 
-        // Máu hiện tại (màu xanh lá) - Sửa lại lấy maxHp động thay vì cố định số 3
-        int maxHp = getMaxHp(); // Hoặc lấy biến lưu trữ tổng máu tối đa của bạn
-        if (maxHp <= 0) maxHp = 1; // Tránh lỗi chia cho 0
+        int maxHp = getMaxHp();
+        if (maxHp <= 0) maxHp = 1;
 
         double hpPercent = (double) Math.max(0, hp) / maxHp;
         int currentHpWidth = (int) (barWidth * hpPercent);
@@ -147,17 +142,16 @@ public class Player extends Mob {
         g2d.setColor(Color.GREEN);
         g2d.fillRect(barX, barY, currentHpWidth, barHeight);
 
-        // Viền đen xung quanh thanh HP
         g2d.setColor(Color.BLACK);
         g2d.drawRect(barX, barY, barWidth, barHeight);
     }
 
     public void handleKeyPressed(KeyEvent e, List<Bomb> globalBombs) {
         int key = e.getKeyCode();
-        if (key == KeyEvent.VK_W || key == KeyEvent.VK_UP)    { goUp = true; currentDirection = Direction.UP; }
-        if (key == KeyEvent.VK_S || key == KeyEvent.VK_DOWN)  { goDown = true; currentDirection = Direction.DOWN; }
-        if (key == KeyEvent.VK_A || key == KeyEvent.VK_LEFT)  { goLeft = true; currentDirection = Direction.LEFT; }
-        if (key == KeyEvent.VK_D || key == KeyEvent.VK_RIGHT) { goRight = true; currentDirection = Direction.RIGHT; }
+        if (key == KeyEvent.VK_W || key == KeyEvent.VK_UP)    { goUp = true; }
+        if (key == KeyEvent.VK_S || key == KeyEvent.VK_DOWN)  { goDown = true; }
+        if (key == KeyEvent.VK_A || key == KeyEvent.VK_LEFT)  { goLeft = true; }
+        if (key == KeyEvent.VK_D || key == KeyEvent.VK_RIGHT) { goRight = true; }
         if (key == KeyEvent.VK_SPACE) {
             dropBomb(mapHash, globalBombs);
         }
@@ -178,9 +172,11 @@ public class Player extends Mob {
     private boolean isValidPosition(double nextX, double nextY) {
         if (mapHash == null) return true;
 
-        int leftTile = (int) (nextX / TILE_SIZE);
-        int rightTile = (int) ((nextX + width - 1) / TILE_SIZE);
-        int topTile = (int) (nextY / TILE_SIZE);
+        // Thu nhỏ nhẹ hitbox (padding = 3) để dễ dàng lách qua khe hẹp
+        int padding = 3;
+        int leftTile = (int) ((nextX + padding) / TILE_SIZE);
+        int rightTile = (int) ((nextX + width - padding - 1) / TILE_SIZE);
+        int topTile = (int) ((nextY + padding) / TILE_SIZE);
         int bottomTile = (int) ((nextY + height - 1) / TILE_SIZE);
 
         try {
@@ -194,45 +190,33 @@ public class Player extends Mob {
     }
 
     private boolean isWalkable(int tileValue) {
-        return tileValue != 1 && tileValue != 2 && tileValue != 4;
+        // Chỉ chặn tường gạch (1) và tường cố định (2). Cho phép đi qua đường trống (0) và các loại item (5-9)
+        return tileValue != 1 && tileValue != 2;
     }
 
     @Override
     public void update() {
         if (!survival) return;
-        double nextX = x;
-        double nextY = y;
         boolean isMoving = false;
 
-        if (goUp)    { nextY -= speed; isMoving = true; currentDirection = Direction.UP; }
-        if (goDown)  { nextY += speed; isMoving = true; currentDirection = Direction.DOWN; }
-        if (goLeft)  { nextX -= speed; isMoving = true; currentDirection = Direction.LEFT; }
-        if (goRight) { nextX += speed; isMoving = true; currentDirection = Direction.RIGHT; }
-
-        if (goLeft || goRight) {
-            if (isValidPosition(nextX, y)) {
-                x = nextX;
-            } else {
-                double alignSpeed = speed;
-                if (isValidPosition(nextX, y - alignSpeed)) {
-                    y -= alignSpeed;
-                } else if (isValidPosition(nextX, y + alignSpeed)) {
-                    y += alignSpeed;
-                }
-            }
+        if (goLeft) {
+            currentDirection = Direction.LEFT;
+            isMoving = true;
+            moveWithSlide(-speed, 0);
+        } else if (goRight) {
+            currentDirection = Direction.RIGHT;
+            isMoving = true;
+            moveWithSlide(speed, 0);
         }
 
-        if (goUp || goDown) {
-            if (isValidPosition(x, nextY)) {
-                y = nextY;
-            } else {
-                double alignSpeed = speed;
-                if (isValidPosition(x - alignSpeed, nextY)) {
-                    x -= alignSpeed;
-                } else if (isValidPosition(x + alignSpeed, nextY)) {
-                    x += alignSpeed;
-                }
-            }
+        if (goUp) {
+            currentDirection = Direction.UP;
+            isMoving = true;
+            moveWithSlide(0, -speed);
+        } else if (goDown) {
+            currentDirection = Direction.DOWN;
+            isMoving = true;
+            moveWithSlide(0, speed);
         }
 
         if (isMoving) {
@@ -240,6 +224,32 @@ public class Player extends Mob {
             if (animTimer > 8) {
                 animIndex = (animIndex + 1) % 4;
                 animTimer = 0;
+            }
+        }
+    }
+
+    /**
+     * Chia nhỏ bước đi từng pixel và hỗ trợ trượt góc mượt mà (corner sliding)
+     */
+    private void moveWithSlide(int dx, int dy) {
+        int steps = Math.max(Math.abs(dx), Math.abs(dy));
+        int stepX = Integer.compare(dx, 0);
+        int stepY = Integer.compare(dy, 0);
+
+        for (int i = 0; i < steps; i++) {
+            if (isValidPosition(x + stepX, y + stepY)) {
+                x += stepX;
+                y += stepY;
+            } else {
+                // Cơ chế trượt góc thông minh khi vướng tường
+                if (stepX != 0) {
+                    if (isValidPosition(x + stepX, y - 1)) { y -= 1; x += stepX; }
+                    else if (isValidPosition(x + stepX, y + 1)) { y += 1; x += stepX; }
+                } else if (stepY != 0) {
+                    if (isValidPosition(x - 1, y + stepY)) { x -= 1; y += stepY; }
+                    else if (isValidPosition(x + 1, y + stepY)) { x += 1; y += stepY; }
+                }
+                break;
             }
         }
     }

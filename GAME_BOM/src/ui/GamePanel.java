@@ -369,34 +369,13 @@ public class GamePanel extends JPanel {
         }
     }
 
-    private void drawMap(Graphics2D g2d) {
-        int[][] grid = gameMap.getGrid();
-        for (int y = 0; y < gameMap.getHeight(); y++) {
-            for (int x = 0; x < gameMap.getWidth(); x++) {
-                int tile = grid[y][x];
-                // Các ô chứa item (5 -> 9) khi vẽ bản đồ sẽ hiển thị nền đất trống (EMPTY)
-                if (tile >= 5 && tile <= 9) {
-                    g2d.setColor(Color.DARK_GRAY);
-                } else {
-                    switch (tile) {
-                        case GameMap.WALL_BRICK -> g2d.setColor(new Color(160, 90, 50));
-                        case GameMap.WALL_SOLID -> g2d.setColor(Color.GRAY);
-                        default -> g2d.setColor(Color.DARK_GRAY);
-                    }
-                }
-                g2d.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
-                g2d.setColor(Color.BLACK);
-                g2d.drawRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
-            }
-        }
-    }
-
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
         Graphics2D g2d = (Graphics2D) g;
 
-        drawMap(g2d);
+        // Gọi trực tiếp hàm vẽ map từ lớp GameMap
+        gameMap.draw(g2d);
 
         for (Item item : activeItems) {
             item.draw(g2d);
