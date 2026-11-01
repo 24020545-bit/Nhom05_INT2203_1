@@ -3,6 +3,7 @@ package entity;
 import bomb.Bomb;
 import entity.mob.Mob;
 import utils.Direction;
+import utils.SoundManager; // THÊM IMPORT
 
 import java.awt.Color;
 import java.awt.Font;
@@ -269,6 +270,9 @@ public class Player extends Mob {
             if (!alreadyHasBomb) {
                 Bomb newBomb = new Bomb(bombX, bombY, mapHash, globalBombList, this.power, this.attackPower);
                 globalBombList.add(newBomb);
+
+                // THÊM: Gọi hàm phát âm thanh đặt bom
+                SoundManager.playSoundEffect("/audio/putbomb.wav");
             }
         }
     }

@@ -11,6 +11,7 @@ import item.Item;
 import map.GameMap;
 import ui.screen.LevelSelectScreen;
 import utils.SaveManager;
+import utils.SoundManager; // THÊM IMPORT SOUND MANAGER
 
 import javax.swing.*;
 import java.awt.*;
@@ -328,7 +329,20 @@ public class GamePanel extends JPanel {
         }
         activeItems.removeIf(Item::isCollected);
 
-        Mobs.MOBS.removeIf(m -> !m.isSurvival());
+        // Kiểm tra và phát âm thanh khi nhân vật (Player hoặc Bot) chết
+        for (int i = Mobs.MOBS.size() - 1; i >= 0; i--) {
+            Mob m = Mobs.MOBS.get(i);
+            if (!m.isSurvival()) {
+                if (m instanceof Player) {
+                    // Phát âm thanh khi người chơi chết
+                    SoundManager.playSoundEffect("/audio/dead1.wav");
+                } else {
+                    // Phát âm thanh khi Bot/Quái chết
+                    SoundManager.playSoundEffect("/audio/dead1.wav");
+                }
+                Mobs.MOBS.remove(i);
+            }
+        }
 
         for (int i = activeBombs.size() - 1; i >= 0; i--) {
             Bomb bomb = activeBombs.get(i);
@@ -358,6 +372,9 @@ public class GamePanel extends JPanel {
             gameTimer.stop();
             SaveManager.clearSaveFile();
 
+            // PHÁT ÂM THANH GAME OVER KHI TẤT CẢ NGƯỜI CHƠI THỬA CUỘC
+            SoundManager.playSoundEffect("/audio/dead2.wav");
+
             JOptionPane.showMessageDialog(this, "Tất cả người chơi đã hy sinh! Trò chơi kết thúc.", "Thua Cuộc", JOptionPane.ERROR_MESSAGE);
             parentFrame.showScreen("LEVEL_SELECT");
         }
@@ -368,7 +385,6 @@ public class GamePanel extends JPanel {
         super.paintComponent(g);
         Graphics2D g2d = (Graphics2D) g;
 
-        // Tính toán tọa độ để căn giữa bản đồ trong khung hình
         int mapWidthPixel = gameMap.getWidth() * TILE_SIZE;
         int mapHeightPixel = gameMap.getHeight() * TILE_SIZE;
         int panelWidth = getWidth();
@@ -377,7 +393,6 @@ public class GamePanel extends JPanel {
         int offsetX = Math.max(0, (panelWidth - mapWidthPixel) / 2);
         int offsetY = Math.max(0, (panelHeight - mapHeightPixel) / 2);
 
-        // Dịch chuyển hệ tọa độ để map nằm chính giữa
         g2d.translate(offsetX, offsetY);
 
         gameMap.draw(g2d);
@@ -394,7 +409,6 @@ public class GamePanel extends JPanel {
             mob.draw(g2d);
         }
 
-        // Trả lại hệ tọa độ gốc để vẽ thanh thông tin (HUD) cố định ở góc trên bên trái
         g2d.translate(-offsetX, -offsetY);
 
         g2d.setColor(Color.WHITE);
