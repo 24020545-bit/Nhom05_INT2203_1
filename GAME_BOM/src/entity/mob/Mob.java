@@ -1,3 +1,4 @@
+
 package entity.mob;
 
 import utils.Direction;
@@ -28,7 +29,6 @@ public abstract class Mob {
     protected long lastAttackTime = 0;
     protected long attackCooldown = 1000;
 
-    // Khởi tạo cơ sở cho tất cả các đối tượng Mob với các thuộc tính vị trí, kích thước, tốc độ và máu
     protected Mob(double x, double y, int width, int height,
                   int speed, int power, int bombLimit, int hp, int attackPower) {
         this.x = x;
@@ -39,82 +39,154 @@ public abstract class Mob {
         this.power = power;
         this.bombLimit = bombLimit;
 
-        this.hp = hp;
-        this.maxHp = hp;
+        this.hp = Math.max(0, hp);
+        this.maxHp = Math.max(0, hp);
         this.attackPower = attackPower;
 
         this.activeBombCount = 0;
-        this.survival = true;
+        this.survival = hp > 0;
         this.deading = false;
         this.currentDirection = Direction.DOWN;
     }
 
-    // Cập nhật trạng thái của Mob mỗi khung hình
     public abstract void update();
 
-    // Vẽ hình ảnh của Mob lên màn hình
     public abstract void draw(Graphics2D g2d);
 
-    // Điều khiển hướng di chuyển của Mob
     public abstract void move(Direction direction);
 
-    // Trừ lượng máu (HP) của Mob khi nhận sát thương và xử lý trạng thái tử vong nếu máu về 0
+    // Nhận sát thương
     public void takeDamage(int damage) {
-        if (!survival) return;
-        hp -= damage;
-        if (hp <= 0) {
-            hp = 0;
+        if (!survival || damage <= 0) return;
+
+        hp = Math.max(0, hp - damage);
+
+        if (hp == 0) {
             survival = false;
+            deading = true;
         }
     }
 
-    // Hồi máu cho Mob, đảm bảo lượng máu không vượt quá giới hạn tối đa (maxHp)
+    // Hồi máu
     public void heal(int amount) {
-        hp += amount;
-        if (hp > maxHp) {
-            hp = maxHp;
+        if (!survival || amount <= 0) return;
+        hp = Math.min(maxHp, hp + amount);
+    }
+
+    public int getHp() {
+        return hp;
+    }
+
+    public void setHp(int hp) {
+        this.hp = Math.max(0, Math.min(maxHp, hp));
+
+        if (this.hp == 0) {
+            survival = false;
+            deading = true;
         }
     }
 
-    // Lấy giá trị máu hiện tại của Mob
-    public int getHp() { return hp; }
+    public int getMaxHp() {
+        return maxHp;
+    }
 
-    // Thiết lập giá trị máu mới cho Mob
-    public void setHp(int hp) { this.hp = hp; }
+    public int getAttackPower() {
+        return attackPower;
+    }
 
-    // Lấy giá trị máu tối đa của Mob
-    public int getMaxHp() { return maxHp; }
+    public void setAttackPower(int attackPower) {
+        this.attackPower = attackPower;
+    }
 
-    // Lấy chỉ số sức mạnh tấn công của Mob
-    public int getAttackPower() { return attackPower; }
-
-    // Thiết lập chỉ số sức mạnh tấn công cho Mob
-    public void setAttackPower(int attackPower) { this.attackPower = attackPower; }
-
-    // Lấy khung chữ nhật va chạm (Bounding Box) của Mob phục vụ kiểm tra va chạm
     public Rectangle getBounds() {
         return new Rectangle((int) x, (int) y, width, height);
     }
 
-    public double getX() { return x; }
-    public void setX(double x) { this.x = x; }
-    public double getY() { return y; }
-    public void setY(double y) { this.y = y; }
-    public void setLocation(double x, double y) { this.x = x; this.y = y; }
-    public int getWidth() { return width; }
-    public int getHeight() { return height; }
-    public boolean isSurvival() { return survival; }
-    public void setSurvival(boolean survival) { this.survival = survival; }
-    public int getSpeed() { return speed; }
-    public void setSpeed(int speed) { this.speed = speed; }
-    public int getPower() { return power; }
-    public void setPower(int power) { this.power = power; }
-    public int getBombLimit() { return bombLimit; }
-    public void setBombLimit(int bombLimit) { this.bombLimit = bombLimit; }
-    public Direction getCurrentDirection() { return currentDirection; }
-    public void setCurrentDirection(Direction currentDirection) { this.currentDirection = currentDirection; }
-    public long getAttackCooldown() { return attackCooldown; }
-    public void setAttackCooldown(long attackCooldown) { this.attackCooldown = attackCooldown; }
-    public long getLastAttackTime() { return lastAttackTime; }
-    public void setLastAttackTime(long lastAttackTime) { this.lastAttackTime = lastAttackTime; }
+    public double getX() {
+        return x;
+    }
+
+    public void setX(double x) {
+        this.x = x;
+    }
+
+    public double getY() {
+        return y;
+    }
+
+    public void setY(double y) {
+        this.y = y;
+    }
+
+    public void setLocation(double x, double y) {
+        this.x = x;
+        this.y = y;
+    }
+
+    public int getWidth() {
+        return width;
+    }
+
+    public int getHeight() {
+        return height;
+    }
+
+    public boolean isSurvival() {
+        return survival;
+    }
+
+    public void setSurvival(boolean survival) {
+        this.survival = survival;
+        if (survival && hp <= 0) {
+            hp = 1;
+        }
+    }
+
+    public int getSpeed() {
+        return speed;
+    }
+
+    public void setSpeed(int speed) {
+        this.speed = speed;
+    }
+
+    public int getPower() {
+        return power;
+    }
+
+    public void setPower(int power) {
+        this.power = power;
+    }
+
+    public int getBombLimit() {
+        return bombLimit;
+    }
+
+    public void setBombLimit(int bombLimit) {
+        this.bombLimit = bombLimit;
+    }
+
+    public Direction getCurrentDirection() {
+        return currentDirection;
+    }
+
+    public void setCurrentDirection(Direction currentDirection) {
+        this.currentDirection = currentDirection;
+    }
+
+    public long getAttackCooldown() {
+        return attackCooldown;
+    }
+
+    public void setAttackCooldown(long attackCooldown) {
+        this.attackCooldown = attackCooldown;
+    }
+
+    public long getLastAttackTime() {
+        return lastAttackTime;
+    }
+
+    public void setLastAttackTime(long lastAttackTime) {
+        this.lastAttackTime = lastAttackTime;
+    }
 }
