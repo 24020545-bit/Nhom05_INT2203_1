@@ -290,7 +290,7 @@ public class GamePanel extends JPanel {
             }
             case 3 -> {
                 int bossHp = (int)((25 + numPlayers * 5) * diff);
-                spawnBot("Boss", 8, 5, (int)(1*diff), bossHp, 0, (long)(6000/diff), targetForDoll, activePlayersArray, gameMap.getGrid());
+                spawnBot("Boss", 9, 5, (int)(1*diff), bossHp, 0, (long)(6000/diff), targetForDoll, activePlayersArray, gameMap.getGrid());
                 spawnBot("Kondoria", 2, 2, (int)(1*diff), (int)(4*diff), (int)(1*diff), (long)(800/diff), targetForDoll, activePlayersArray, gameMap.getGrid());
             }
             case 4 -> {
