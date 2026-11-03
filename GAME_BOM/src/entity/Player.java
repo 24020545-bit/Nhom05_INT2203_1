@@ -3,6 +3,7 @@ package entity;
 import bomb.Bomb;
 import entity.mob.Mob;
 import utils.Direction;
+import utils.SoundManager; // THÊM IMPORT
 
 import java.awt.Color;
 import java.awt.Font;
@@ -17,8 +18,8 @@ public class Player extends Mob {
     private final int[][] mapHash;
     private final int TILE_SIZE = 32;
 
-    private static final int PLAYER_WIDTH = 24;
-    private static final int PLAYER_HEIGHT = 32;
+    private static final int PLAYER_WIDTH = 20;
+    private static final int PLAYER_HEIGHT = 28;
 
     private final Image[] downImgs = new Image[4];
     private final Image[] upImgs = new Image[4];
@@ -269,6 +270,9 @@ public class Player extends Mob {
             if (!alreadyHasBomb) {
                 Bomb newBomb = new Bomb(bombX, bombY, mapHash, globalBombList, this.power, this.attackPower);
                 globalBombList.add(newBomb);
+
+                // THÊM: Gọi hàm phát âm thanh đặt bom
+                SoundManager.playSoundEffect("/audio/putbomb.wav");
             }
         }
     }

@@ -3,6 +3,7 @@ package bomb;
 import entity.Player;
 import entity.mob.Mob;
 import entity.mob.Mobs;
+import utils.SoundManager; // THÊM IMPORT
 
 import java.awt.Graphics2D;
 import java.awt.Image;
@@ -153,6 +154,9 @@ public class Bomb {
         explodeTimer = 0;
         calculateFlameRange();
         updateMapHash(0);
+
+        // THÊM: Gọi hàm phát âm thanh bom nổ
+        SoundManager.playSoundEffect("/audio/boom.wav");
     }
 
     /** Kiểm tra và kích nổ lan các quả bom khác nằm trong tầm lửa */

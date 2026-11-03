@@ -6,6 +6,7 @@ import javax.swing.*;
 import java.awt.*;
 
 public class HomeScreen extends JPanel {
+
     public HomeScreen(GameFrame frame) {
         setLayout(new GridBagLayout());
         setBackground(Color.DARK_GRAY);

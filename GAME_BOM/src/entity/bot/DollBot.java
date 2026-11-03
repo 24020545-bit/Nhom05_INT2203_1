@@ -11,9 +11,9 @@ import java.awt.Image;
 import javax.swing.ImageIcon;
 
 public class DollBot extends Mob {
+    private Player[] players; // Hỗ trợ nhiều người chơi giống KondoriaBot
     private int[][] mapHash;
     private final int TILE_SIZE = 32;
-    private Player targetPlayer;
     private RandomMovement randomMovement;
 
     private Image leftImg;
@@ -24,14 +24,20 @@ public class DollBot extends Mob {
     private int animIndex = 0;
     private int animTimer = 0;
 
-    public DollBot(double x, double y, int width, int height, int speed, int hp, int attackPower, long attackCooldown, Player targetPlayer, int[][] mapHash) {
-        super(x, y, width, height, 1, speed, 0, hp, attackPower);
-        this.targetPlayer = targetPlayer;
+    // Constructor hỗ trợ mảng Player[] để BossBot triệu hồi chính xác
+    public DollBot(double x, double y, int width, int height, int speed, int hp, int attackPower, long attackCooldown, Player[] players, int[][] mapHash) {
+        super(x, y, width, height, speed, 0, 0, hp, attackPower);
+        this.players = players;
         this.mapHash = mapHash;
         this.attackCooldown = attackCooldown;
         this.randomMovement = new RandomMovement(x, y, width, height, speed, mapHash);
         this.currentDirection = randomMovement.getCurrentDirection();
         loadImages();
+    }
+
+    // Constructor phụ phòng hờ nếu nơi khác gọi với 1 Player đơn lẻ
+    public DollBot(double x, double y, int width, int height, int speed, int hp, int attackPower, long attackCooldown, Player targetPlayer, int[][] mapHash) {
+        this(x, y, width, height, speed, hp, attackPower, attackCooldown, targetPlayer != null ? new Player[]{targetPlayer} : null, mapHash);
     }
 
     private void loadImages() {
@@ -56,16 +62,22 @@ public class DollBot extends Mob {
     public void update() {
         if (!survival) return;
 
-        if (targetPlayer != null && targetPlayer.isSurvival()) {
-            if (this.getBounds().intersects(targetPlayer.getBounds())) {
-                long currentTime = System.currentTimeMillis();
-                if (currentTime - lastAttackTime >= attackCooldown) {
-                    targetPlayer.takeDamage(this.attackPower);
-                    lastAttackTime = currentTime;
+        // Kiểm tra va chạm và tấn công bất kỳ Player nào đang sống
+        if (players != null) {
+            long currentTime = System.currentTimeMillis();
+            for (Player player : players) {
+                if (player != null && player.isSurvival()) {
+                    if (this.getBounds().intersects(player.getBounds())) {
+                        if (currentTime - lastAttackTime >= attackCooldown) {
+                            player.takeDamage(this.attackPower);
+                            lastAttackTime = currentTime;
+                        }
+                    }
                 }
             }
         }
 
+        // Di chuyển ngẫu nhiên bám lưới
         randomMovement.update(x, y);
         this.x = randomMovement.getX();
         this.y = randomMovement.getY();
@@ -96,7 +108,7 @@ public class DollBot extends Mob {
         }
 
         // Chọn ảnh theo hướng di chuyển (trái/phải)
-        Image currentImg = rightImg;
+        Image currentImg;
         if (currentDirection == Direction.LEFT) {
             currentImg = (leftImg != null) ? leftImg : rightImg;
         } else {
