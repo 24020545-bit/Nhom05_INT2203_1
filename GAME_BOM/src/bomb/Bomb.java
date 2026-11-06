@@ -118,7 +118,7 @@ public class Bomb {
             explodeTimer++;
             checkFlameDamage();
 
-            if (explodeTimer >= 30) {
+            if (explodeTimer >= 20) {
                 updateMapHash(0);
                 active = false;
             }
