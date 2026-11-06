@@ -3,11 +3,11 @@ package entity.bot;
 import entity.Player;
 import entity.mob.Mob;
 import utils.Direction;
+import utils.RandomMovement;
 
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.Image;
-import java.util.Random;
 import javax.swing.ImageIcon;
 
 /**
@@ -17,17 +17,19 @@ import javax.swing.ImageIcon;
 public class KondoriaBot extends Mob {
 
     private static final int TILE_SIZE = 32;
-    private static final int CHASE_RADIUS = 3;
+    private static final int CHASE_RADIUS = 4;
     private static final double EPSILON = 0.001;
 
     private final Player[] players;
     private final int[][] mapHash;
     private Player currentTarget;
 
-    // Wander (đi lang thang khi không thấy player)
-    private final Random rnd = new Random();
-    private Direction wanderDir = Direction.LEFT;
-    private int wanderTicks = 0;
+    // Sử dụng RandomMovement cho việc đi lang thang
+    private RandomMovement randomMovement;
+
+    // Biến hỗ trợ di chuyển bám lưới khi chase
+    private double moveHori = 0;
+    private double moveVerti = 0;
 
     // Hình ảnh + animation
     private Image leftImg, rightImg;
@@ -46,6 +48,9 @@ public class KondoriaBot extends Mob {
         this.mapHash = mapHash;
         this.attackCooldown = attackCooldown;
         this.currentDirection = Direction.LEFT;
+
+        // Khởi tạo đối tượng RandomMovement
+        this.randomMovement = new RandomMovement(x, y, width, height, speed, mapHash);
 
         loadImages();
     }
@@ -98,7 +103,6 @@ public class KondoriaBot extends Mob {
 
     // ===================== Tấn công =====================
 
-    // Tấn công Player khi va chạm
     private void attackPlayer() {
         if (players == null) return;
 
@@ -118,7 +122,6 @@ public class KondoriaBot extends Mob {
 
     // ===================== Tìm mục tiêu =====================
 
-    // Tìm Player gần nhất trong phạm vi phát hiện
     private void findClosestTarget() {
         currentTarget = null;
         if (players == null) return;
@@ -150,88 +153,90 @@ public class KondoriaBot extends Mob {
 
     // ===================== Di chuyển =====================
 
-    // Đuổi theo Player (ưu tiên trục có khoảng cách lớn hơn)
     private void chasePlayer() {
-        double dx = currentTarget.getX() + currentTarget.getWidth() / 2.0
-                - (x + width / 2.0);
-        double dy = currentTarget.getY() + currentTarget.getHeight() / 2.0
-                - (y + height / 2.0);
+        if (currentTarget == null) return;
 
-        if (Math.abs(dx) >= Math.abs(dy)) {
-            if (!moveHorizontal(dx)) {
-                moveVertical(dy);
+        int j = (int) ((x + width / 2.0) / TILE_SIZE);
+        int i = (int) ((y + height / 2.0) / TILE_SIZE);
+
+        int jp = (int) (currentTarget.getX() + currentTarget.getWidth() / 2.0) / TILE_SIZE;
+        int ip = (int) (currentTarget.getY() + currentTarget.getHeight() / 2.0) / TILE_SIZE;
+
+        double targetCenterX = j * TILE_SIZE;
+        double targetCenterY = i * TILE_SIZE;
+
+        // Chỉ căn gióng về tâm khi khoảng cách thực tế nhỏ hơn tốc độ di chuyển để triệt tiêu hiện tượng giật/teleport
+        if ((moveHori == 0 && moveVerti == 0) ||
+                (Math.abs(targetCenterX - x) <= speed && Math.abs(targetCenterY - y) <= speed)) {
+
+            x = targetCenterX;
+            y = targetCenterY;
+
+            moveHori = 0;
+            moveVerti = 0;
+
+            if (jp != j) {
+                moveHori = (jp < j) ? -speed : speed;
             }
-        } else {
-            if (!moveVertical(dy)) {
-                moveHorizontal(dx);
+            if (ip != i) {
+                moveVerti = (ip < i) ? -speed : speed;
+            }
+
+            // Nếu đi được cả 2 trục, ưu tiên trục có khoảng cách lớn hơn
+            if (moveVerti != 0 && moveHori != 0) {
+                if (Math.abs(ip - i) > Math.abs(jp - j)) {
+                    moveHori = 0;
+                } else {
+                    moveVerti = 0;
+                }
             }
         }
+
+        applyMovement();
     }
 
-    // Đi lang thang: chọn hướng ngẫu nhiên, đi một lúc rồi đổi
     private void randomMove() {
-        if (--wanderTicks <= 0) {
-            Direction[] dirs = {
-                    Direction.LEFT, Direction.RIGHT,
-                    Direction.UP, Direction.DOWN
-            };
-            wanderDir = dirs[rnd.nextInt(dirs.length)];
-            wanderTicks = 30 + rnd.nextInt(60);
+        // Sử dụng hàm update của RandomMovement để đi lang thang (ưu tiên đường trống nhưng vẫn xuyên tường được)
+        randomMovement.update(x, y);
+
+        // Đồng bộ tọa độ và hướng từ RandomMovement sang KondoriaBot
+        this.x = randomMovement.getX();
+        this.y = randomMovement.getY();
+        this.currentDirection = randomMovement.getCurrentDirection();
+
+        // Reset lại vận tốc chase để khi mất mục tiêu/quay lại chase sẽ không bị xung đột
+        moveHori = 0;
+        moveVerti = 0;
+    }
+
+    private void applyMovement() {
+        double nextX = x + moveHori;
+        double nextY = y + moveVerti;
+
+        if (canMove(nextX, nextY)) {
+            x = nextX;
+            y = nextY;
+
+            if (Math.abs(moveHori) > EPSILON) {
+                currentDirection = moveHori < 0 ? Direction.LEFT : Direction.RIGHT;
+            } else if (Math.abs(moveVerti) > EPSILON) {
+                currentDirection = moveVerti < 0 ? Direction.UP : Direction.DOWN;
+            }
         }
 
-        boolean moved = false;
+        // Làm tròn tọa độ tránh sai số dấu phẩy động
+        x = roundValue(x * 10) / 10.0;
+        y = roundValue(y * 10) / 10.0;
+    }
 
-        switch (wanderDir) {
-            case LEFT:
-                moved = moveHorizontal(-speed);
-                break;
-            case RIGHT:
-                moved = moveHorizontal(speed);
-                break;
-            case UP:
-                moved = moveVertical(-speed);
-                break;
-            case DOWN:
-                moved = moveVertical(speed);
-                break;
-            default:
-                break;
+    private double roundValue(double a) {
+        double num = (int) a;
+        if (num + 0.5 <= a) {
+            num += 1;
         }
-
-        // Chạm viền bản đồ -> đổi hướng ngay ở tick sau
-        if (!moved) wanderTicks = 0;
+        return num;
     }
 
-    // Di chuyển ngang
-    private boolean moveHorizontal(double dx) {
-        if (Math.abs(dx) < EPSILON) return false;
-
-        double step = Math.signum(dx) * Math.min(speed, Math.abs(dx));
-        double nextX = x + step;
-
-        if (!canMove(nextX, y)) return false;
-
-        x = nextX;
-        currentDirection = dx < 0 ? Direction.LEFT : Direction.RIGHT;
-        return true;
-    }
-
-    // Di chuyển dọc
-    private boolean moveVertical(double dy) {
-        if (Math.abs(dy) < EPSILON) return false;
-
-        double step = Math.signum(dy) * Math.min(speed, Math.abs(dy));
-        double nextY = y + step;
-
-        if (!canMove(x, nextY)) return false;
-
-        y = nextY;
-        currentDirection = dy < 0 ? Direction.UP : Direction.DOWN;
-        return true;
-    }
-
-    // Kondoria xuyên được gạch mềm (1) lẫn tường cứng (2),
-    // chỉ bị chặn bởi viền ngoài bản đồ (hàng/cột đầu và cuối)
     private boolean canMove(double nextX, double nextY) {
         if (mapHash == null || mapHash.length == 0) return false;
 
@@ -240,13 +245,13 @@ public class KondoriaBot extends Mob {
         int top = (int) Math.floor(nextY / TILE_SIZE);
         int bottom = (int) Math.floor((nextY + height - EPSILON) / TILE_SIZE);
 
-        int maxRow = mapHash.length - 1;
-        int maxCol = mapHash[0].length - 1;
+        int maxRow = mapHash.length;
+        int maxCol = mapHash[0].length;
 
-        return left >= 1 && top >= 1 && right < maxCol && bottom < maxRow;
+        // Kondoria chỉ bị chặn bởi viền ngoài bản đồ (hàng/cột đầu và cuối)
+        return left >= 1 && top >= 1 && right < maxCol - 1 && bottom < maxRow - 1;
     }
 
-    // Giới hạn tọa độ trong bản đồ
     private void clampToBounds() {
         if (mapHash == null || mapHash.length == 0) return;
 

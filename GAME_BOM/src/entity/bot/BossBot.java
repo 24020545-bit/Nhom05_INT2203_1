@@ -47,7 +47,7 @@ public class BossBot extends Mob {
     private int summonAnimIndex = 0;
     private int summonAnimTimer = 0;
 
-    private static final int SUMMON_ANIM_DELAY = 8;
+    private static final int SUMMON_ANIM_DELAY = 16;
 
     public BossBot(double x, double y, int width, int height,
                    int speed, int hp, long summonCooldown,
@@ -184,6 +184,9 @@ public class BossBot extends Mob {
 
                 animIndex = 0;
                 animTimer = 0;
+
+                // Hiệu ứng chạy xong mới tiến hành sinh quái ra bản đồ
+                spawnMinions();
             }
         }
     }
@@ -295,27 +298,30 @@ public class BossBot extends Mob {
     }
 
     // ==================================================
-    // TRIỆU HỒI QUÁI
+    // KÍCH HOẠT TRIỆU HỒI (BẮT ĐẦU HIỆU ỨNG)
     // ==================================================
 
     private void summonMinions() {
-
         if (mapHash == null || mapHash.length == 0) return;
-
-        Player[] activePlayers = Mobs.MOBS.stream()
-
-                .filter(m -> m instanceof Player && m.isSurvival())
-
-                .map(m -> (Player) m)
-
-                .toArray(Player[]::new);
-
-        if (activePlayers.length == 0) return;
 
         // Bắt đầu hiệu ứng triệu hồi
         isSummoning = true;
         summonAnimIndex = 0;
         summonAnimTimer = 0;
+    }
+
+    // ==================================================
+    // THỰC SỰ TẠO MINIONS SAU KHI HIỆU ỨNG KẾT THÚC
+    // ==================================================
+
+    private void spawnMinions() {
+
+        Player[] activePlayers = Mobs.MOBS.stream()
+                .filter(m -> m instanceof Player && m.isSurvival())
+                .map(m -> (Player) m)
+                .toArray(Player[]::new);
+
+        if (activePlayers.length == 0) return;
 
         int[][] offsets = {
                 {1, 0},
@@ -436,7 +442,7 @@ public class BossBot extends Mob {
 
         // Thanh máu Boss
         int barHeight = 5;
-        int barY = (int) y - 8; // Đã sửa lỗi thiếu dấu trừ
+        int barY = (int) y - 8;
 
         g2d.setColor(Color.DARK_GRAY);
 
@@ -450,7 +456,7 @@ public class BossBot extends Mob {
         if (maxHp > 0) {
 
             int hpWidth = (int) (
-                    width * Math.max( // Đã sửa lỗi thiếu dấu nhân (*)
+                    width * Math.max(
                             0,
                             Math.min(1, (double) hp / maxHp)
                     )
