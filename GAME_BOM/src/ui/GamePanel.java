@@ -25,6 +25,8 @@ import java.util.Properties;
 public class GamePanel extends JPanel {
 
     private final int TILE_SIZE = 32;
+    private static final int HUD_HEIGHT = 45; // Chiều cao vừa đủ cho 2-3 dòng chữ HUD
+
     private final GameFrame parentFrame;
     private final int currentLevel;
     private final int playerCount;
@@ -75,8 +77,6 @@ public class GamePanel extends JPanel {
                     gameMap.setGrid(loadedGrid);
                 }
 
-                adjustWindowSize();
-
                 int savedPlayerCount = Integer.parseInt(saveProps.getProperty("playerCount", "1"));
                 for (int i = 0; i < savedPlayerCount; i++) {
                     Player p = new Player(TILE_SIZE, TILE_SIZE, gameMap.getGrid());
@@ -117,6 +117,7 @@ public class GamePanel extends JPanel {
             initDefaultGame(levelIndex, this.playerCount);
         }
 
+        adjustWindowSize();
         loadItemsFromGrid();
 
         addKeyListener(new KeyAdapter() {
@@ -157,14 +158,17 @@ public class GamePanel extends JPanel {
     }
 
     public void adjustWindowSize() {
+        if (gameMap == null) return;
+
         int mapWidthPixel = gameMap.getWidth() * TILE_SIZE;
-        int mapHeightPixel = gameMap.getHeight() * TILE_SIZE + 40;
+        int mapHeightPixel = gameMap.getHeight() * TILE_SIZE + HUD_HEIGHT;
 
         Dimension dim = new Dimension(mapWidthPixel, mapHeightPixel);
         setPreferredSize(dim);
-        setSize(dim);
+        setMinimumSize(dim);
 
         if (parentFrame != null) {
+            parentFrame.revalidate();
             parentFrame.pack();
             parentFrame.setLocationRelativeTo(null);
         }
@@ -237,8 +241,6 @@ public class GamePanel extends JPanel {
     }
 
     private void initDefaultGame(int levelIndex, int numPlayers) {
-        adjustWindowSize();
-
         double[][] spawnPositions = {
                 {TILE_SIZE, TILE_SIZE},
                 {(gameMap.getWidth() - 2) * TILE_SIZE, (gameMap.getHeight() - 2) * TILE_SIZE}
@@ -313,11 +315,7 @@ public class GamePanel extends JPanel {
         for (int i = Mobs.MOBS.size() - 1; i >= 0; i--) {
             Mob m = Mobs.MOBS.get(i);
             if (!m.isSurvival()) {
-                if (m instanceof Player) {
-                    SoundManager.playSoundEffect("/audio/dead1.wav");
-                } else {
-                    SoundManager.playSoundEffect("/audio/dead1.wav");
-                }
+                SoundManager.playSoundEffect("/audio/dead1.wav");
                 Mobs.MOBS.remove(i);
             }
         }
@@ -364,15 +362,31 @@ public class GamePanel extends JPanel {
         super.paintComponent(g);
         Graphics2D g2d = (Graphics2D) g;
 
+        g2d.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+
         int mapWidthPixel = gameMap.getWidth() * TILE_SIZE;
-        int mapHeightPixel = gameMap.getHeight() * TILE_SIZE;
-        int panelWidth = getWidth();
-        int panelHeight = getHeight();
+        int offsetX = Math.max(0, (getWidth() - mapWidthPixel) / 2);
 
-        int offsetX = Math.max(0, (panelWidth - mapWidthPixel) / 2);
-        int offsetY = Math.max(0, (panelHeight - mapHeightPixel) / 2);
+        // 1. VẼ THANH HUD TẠI VỊ TRÍ GÓC TÊN TRÊN
+        g2d.setColor(Color.WHITE);
+        g2d.setFont(new Font("Arial", Font.BOLD, 13));
 
-        g2d.translate(offsetX, offsetY);
+        int yText = 15;
+        for (int i = 0; i < players.size(); i++) {
+            Player p = players.get(i);
+            String status = p.isSurvival() ? "" : " [ĐÃ HY SINH]";
+            g2d.drawString(
+                    "P" + (i + 1) + " | HP: " + p.getHp()
+                            + " | Sức mạnh: " + p.getPower()
+                            + " | Tốc độ: " + p.getSpeed() + status,
+                    offsetX + 10, yText
+            );
+            yText += 15;
+        }
+        g2d.drawString("Cửa ải: " + currentLevel + " [ESC để lưu & thoát]", offsetX + 10, yText);
+
+        // 2. VẼ GAME MAP VÀ ENTITY NGAY DƯỚI THANH HUD
+        g2d.translate(offsetX, HUD_HEIGHT);
 
         gameMap.draw(g2d);
 
@@ -388,22 +402,6 @@ public class GamePanel extends JPanel {
             mob.draw(g2d);
         }
 
-        g2d.translate(-offsetX, -offsetY);
-
-        g2d.setColor(Color.WHITE);
-        g2d.setFont(new Font("Arial", Font.BOLD, 13));
-        int yOffset = 20;
-        for (int i = 0; i < players.size(); i++) {
-            Player p = players.get(i);
-            String status = p.isSurvival() ? "" : " [ĐÃ HI SINH]";
-            g2d.drawString(
-                    "P" + (i + 1) + " | HP: " + p.getHp()
-                            + " | Sức mạnh: " + p.getPower()
-                            + " | Tốc độ: " + p.getSpeed() + status,
-                    10, yOffset
-            );
-            yOffset += 18;
-        }
-        g2d.drawString("Cửa ải: " + currentLevel + " [ESC để lưu & thoát]", 10, yOffset + 5);
+        g2d.translate(-offsetX, -HUD_HEIGHT);
     }
 }

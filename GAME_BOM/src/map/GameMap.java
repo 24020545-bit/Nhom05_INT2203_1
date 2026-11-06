@@ -43,38 +43,58 @@ public class GameMap {
         }
 
         if (!mapList.isEmpty()) {
-            this.currentGrid = mapList.get(0);
+            this.currentGrid = copyGrid(mapList.get(0));
         }
     }
 
     /**
      * Tải bản đồ theo Cửa ải (Level):
-     * - Cửa ải 1, 2 dùng Map 1 (Index 0)
-     * - Cửa ải 3, 4 dùng Map 2 (Index 1)
-     * - Cửa ải 5, 6... dùng Map 3 (Index 2)
+     * Cửa ải 1, 2 dùng Map index 0
+     * Cửa ải 3, 4 dùng Map index 1
+     * Cửa ải 5, 6 dùng Map index 2...
+     * Tự động tạo bản sao (Deep Copy) để phá gạch màn trước không làm hỏng màn sau.
      */
     public void loadLevelMap(int levelIndex) {
         if (mapList.isEmpty()) return;
 
-        int mapIndex = switch (levelIndex) {
-            case 1, 2 -> 0; // Map 1
-            case 3, 4 -> 1; // Map 2
-            default -> 2;   // Map 3 (Level 5, 6...)
-        };
+        // Tính toán index map dựa vào levelIndex (mỗi 2 level đổi 1 map)
+        int mapIndex = (levelIndex - 1) / 2;
 
-        // Đảm bảo không bị vượt quá số lượng map đọc từ file map.txt
+        // Đảm bảo không bị out of bounds nếu levelIndex quá lớn
         if (mapIndex >= mapList.size()) {
             mapIndex = mapList.size() - 1;
         }
 
-        this.currentGrid = mapList.get(mapIndex);
+        // Deep copy bản đồ gốc để biến đổi ô gạch độc lập giữa các màn
+        this.currentGrid = copyGrid(mapList.get(mapIndex));
+    }
+
+    /**
+     * Phương thức sao chép mảng 2 chiều để tránh gán trùng tham chiếu (Reference)
+     */
+    private int[][] copyGrid(int[][] original) {
+        if (original == null) return new int[0][0];
+        int height = original.length;
+        int width = original[0].length;
+        int[][] copy = new int[height][width];
+
+        for (int i = 0; i < height; i++) {
+            System.arraycopy(original[i], 0, copy[i], 0, width);
+        }
+        return copy;
     }
 
     private void loadMapImages() {
         try {
+            // Đã kiểm tra fallback cả 2 đường dẫn tránh gõ sai chính tả đường dẫn thư mục
             var w0 = getClass().getResource("/EnvironmentImgae/wall0.png");
+            if (w0 == null) w0 = getClass().getResource("/EnvironmentImage/wall0.png");
+
             var w1 = getClass().getResource("/EnvironmentImgae/wall1.png");
+            if (w1 == null) w1 = getClass().getResource("/EnvironmentImage/wall1.png");
+
             var w2 = getClass().getResource("/EnvironmentImgae/wall2.png");
+            if (w2 == null) w2 = getClass().getResource("/EnvironmentImage/wall2.png");
 
             wall0Img = (w0 != null) ? new ImageIcon(w0).getImage() : null;
             wall1Img = (w1 != null) ? new ImageIcon(w1).getImage() : null;
@@ -93,6 +113,7 @@ public class GameMap {
                     .getResourceAsStream("map.txt");
 
             if (is == null) {
+                System.err.println("Không tìm thấy file map.txt trong resources!");
                 return;
             }
 
@@ -175,19 +196,23 @@ public class GameMap {
     }
 
     public void setGrid(int[][] loadedGrid) {
-        this.currentGrid = loadedGrid;
+        this.currentGrid = copyGrid(loadedGrid);
     }
 
     /** Phương thức vẽ bản đồ bằng hình ảnh */
     public void draw(Graphics2D g2d) {
         int[][] grid = getGrid();
-        for (int y = 0; y < getHeight(); y++) {
-            for (int x = 0; x < getWidth(); x++) {
+        int height = getHeight();
+        int width = getWidth();
+
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
                 int tile = grid[y][x];
                 Image tileImg = null;
 
+                // Ẩn các ô chứa item (5-9) bên dưới hình gạch/cỏ
                 if (tile >= 5 && tile <= 9) {
-                    tileImg = wall0Img;
+                    tileImg = wall0Img; // Ô chứa item khi chưa nổ gạch thì hiển thị nền cỏ hoặc tường tùy game logic
                 } else {
                     switch (tile) {
                         case WALL_BRICK -> tileImg = wall1Img;
