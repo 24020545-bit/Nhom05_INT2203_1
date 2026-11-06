@@ -4,6 +4,7 @@ import entity.Player;
 import entity.bot.BossBot;
 import entity.bot.DollBot;
 import entity.bot.KondoriaBot;
+import entity.bot.BotSpawner;
 import entity.mob.Mob;
 import entity.mob.Mobs;
 import bomb.Bomb;
@@ -11,7 +12,7 @@ import item.Item;
 import map.GameMap;
 import ui.screen.LevelSelectScreen;
 import utils.SaveManager;
-import utils.SoundManager; // THÊM IMPORT SOUND MANAGER
+import utils.SoundManager;
 
 import javax.swing.*;
 import java.awt.*;
@@ -108,10 +109,8 @@ public class GamePanel extends JPanel {
                         Mobs.add(boss);
                     }
                 }
-                System.out.println("Đã khôi phục thành công trạng thái game dở!");
 
             } catch (Exception e) {
-                System.err.println("Lỗi khôi phục trạng thái game dở: " + e.getMessage());
                 initDefaultGame(levelIndex, this.playerCount);
             }
         } else {
@@ -157,7 +156,6 @@ public class GamePanel extends JPanel {
         gameTimer.start();
     }
 
-    /** Điều chỉnh kích thước cửa sổ vừa khít với bản đồ chơi và canh giữa tuyệt đối[cite: 1] */
     public void adjustWindowSize() {
         int mapWidthPixel = gameMap.getWidth() * TILE_SIZE;
         int mapHeightPixel = gameMap.getHeight() * TILE_SIZE + 40;
@@ -168,7 +166,7 @@ public class GamePanel extends JPanel {
 
         if (parentFrame != null) {
             parentFrame.pack();
-            parentFrame.setLocationRelativeTo(null); // Canh giữa màn hình[cite: 1]
+            parentFrame.setLocationRelativeTo(null);
         }
     }
 
@@ -256,58 +254,41 @@ public class GamePanel extends JPanel {
         initBots(levelIndex, numPlayers);
     }
 
-    private void spawnBot(String type, int tileX, int tileY, int speed, int hp, int power, long cooldown, Player target, Player[] allPlayers, int[][] grid) {
-        double x = tileX * TILE_SIZE;
-        double y = tileY * TILE_SIZE;
-        Mob bot = switch (type) {
-            case "Doll" -> new DollBot(x, y, TILE_SIZE, TILE_SIZE, speed, hp, power, cooldown, target, grid);
-            case "Kondoria" -> new KondoriaBot(x, y, TILE_SIZE, TILE_SIZE, speed, hp, power, cooldown, allPlayers, grid);
-            case "Boss" -> new BossBot(x, y, TILE_SIZE, TILE_SIZE, speed, hp, cooldown, grid);
-            default -> null;
-        };
-        if (bot != null) Mobs.add(bot);
-    }
-
     private void initBots(int levelIndex, int numPlayers) {
-        Player[] activePlayersArray = players.toArray(new Player[0]);
-        Player targetForDoll = activePlayersArray[0];
-
-        double diff = (numPlayers >= 2) ? 1.25 : 1.0;
+        BotSpawner.setGrid(gameMap.getGrid());
 
         switch (levelIndex) {
             case 1 -> {
-                spawnBot("Doll", 5, 3, (int)(1*diff), (int)(2*diff), (int)(1*diff), (long)(1500/diff), targetForDoll, activePlayersArray, gameMap.getGrid());
+                BotSpawner.spawn("Doll", 5, 3, levelIndex, numPlayers);
                 if (numPlayers >= 2) {
-                    spawnBot("Doll", 10, 5, (int)(1*diff), (int)(2*diff), (int)(1*diff), (long)(1500/diff), targetForDoll, activePlayersArray, gameMap.getGrid());
+                    BotSpawner.spawn("Doll", 10, 5, levelIndex, numPlayers);
                 }
             }
             case 2 -> {
-                spawnBot("Doll", 5, 3, (int)(1*diff), (int)(3*diff), (int)(1*diff), (long)(1200/diff), targetForDoll, activePlayersArray, gameMap.getGrid());
-                spawnBot("Kondoria", 7, 3, (int)(1*diff), (int)(3*diff), (int)(1*diff), (long)(1000/diff), targetForDoll, activePlayersArray, gameMap.getGrid());
+                BotSpawner.spawn("Doll", 5, 3, levelIndex, numPlayers);
+                BotSpawner.spawn("Kondoria", 7, 3, levelIndex, numPlayers);
                 if (numPlayers >= 2) {
-                    spawnBot("Kondoria", 12, 7, (int)(1*diff), (int)(3*diff), (int)(1*diff), (long)(1000/diff), targetForDoll, activePlayersArray, gameMap.getGrid());
+                    BotSpawner.spawn("Kondoria", 12, 7, levelIndex, numPlayers);
                 }
             }
             case 3 -> {
-                int bossHp = (int)((25 + numPlayers * 5) * diff);
-                spawnBot("Boss", 9, 5, (int)(1*diff), bossHp, 0, (long)(6000/diff), targetForDoll, activePlayersArray, gameMap.getGrid());
-                spawnBot("Kondoria", 2, 2, (int)(1*diff), (int)(4*diff), (int)(1*diff), (long)(800/diff), targetForDoll, activePlayersArray, gameMap.getGrid());
+                BotSpawner.spawn("Boss", 9, 5, levelIndex, numPlayers);
+                BotSpawner.spawn("Kondoria", 2, 2, levelIndex, numPlayers);
             }
             case 4 -> {
-                spawnBot("Doll", 3, 3, (int)(2*diff), (int)(4*diff), (int)(1*diff), (long)(900/diff), targetForDoll, activePlayersArray, gameMap.getGrid());
-                spawnBot("Doll", 12, 8, (int)(2*diff), (int)(4*diff), (int)(1*diff), (long)(900/diff), targetForDoll, activePlayersArray, gameMap.getGrid());
-                spawnBot("Kondoria", 8, 4, (int)(1*diff), (int)(6*diff), (int)(1*diff), (long)(700/diff), targetForDoll, activePlayersArray, gameMap.getGrid());
+                BotSpawner.spawn("Doll", 3, 3, levelIndex, numPlayers);
+                BotSpawner.spawn("Doll", 12, 8, levelIndex, numPlayers);
+                BotSpawner.spawn("Kondoria", 8, 4, levelIndex, numPlayers);
             }
             case 5 -> {
-                int bossHp = (int)((35 + numPlayers * 5) * diff);
-                spawnBot("Boss", 10, 5, (int)(1*diff), bossHp, 0, (long)(5000/diff), targetForDoll, activePlayersArray, gameMap.getGrid());
-                spawnBot("Kondoria", 4, 3, (int)(1*diff), (int)(6*diff), (int)(1*diff), (long)(600/diff), targetForDoll, activePlayersArray, gameMap.getGrid());
-                spawnBot("Kondoria", 15, 8, (int)(1*diff), (int)(6*diff), (int)(1*diff), (long)(600/diff), targetForDoll, activePlayersArray, gameMap.getGrid());
+                BotSpawner.spawn("Boss", 10, 5, levelIndex, numPlayers);
+                BotSpawner.spawn("Kondoria", 4, 3, levelIndex, numPlayers);
+                BotSpawner.spawn("Kondoria", 15, 8, levelIndex, numPlayers);
             }
             default -> {
-                spawnBot("Doll", 3, 3, (int)(2*diff), (int)(6*diff), (int)(1*diff), (long)(700/diff), targetForDoll, activePlayersArray, gameMap.getGrid());
-                spawnBot("Kondoria", 10, 8, (int)(2*diff), (int)(10*diff), (int)(1*diff), (long)(400/diff), targetForDoll, activePlayersArray, gameMap.getGrid());
-                spawnBot("Boss", 11, 5, (int)(1*diff), (int)(55*diff), 0, (long)(3500/diff), targetForDoll, activePlayersArray, gameMap.getGrid());
+                BotSpawner.spawn("Doll", 3, 3, levelIndex, numPlayers);
+                BotSpawner.spawn("Kondoria", 10, 8, levelIndex, numPlayers);
+                BotSpawner.spawn("Boss", 11, 5, levelIndex, numPlayers);
             }
         }
     }
@@ -329,7 +310,6 @@ public class GamePanel extends JPanel {
         }
         activeItems.removeIf(Item::isCollected);
 
-        // Kiểm tra và phát âm thanh khi nhân vật (Player hoặc Bot) chết
         for (int i = Mobs.MOBS.size() - 1; i >= 0; i--) {
             Mob m = Mobs.MOBS.get(i);
             if (!m.isSurvival()) {
@@ -362,8 +342,7 @@ public class GamePanel extends JPanel {
                 LevelSelectScreen.unlockNextLevel(currentLevel);
                 SaveManager.clearSaveFile();
 
-                // PHÁT ÂM THANH CHIẾN THẮNG / QUA MÀN
-                SoundManager.playSoundEffect("/audio/quaman.wav"); // Bạn có thể đổi thành "/audio/win.wav" nếu có file riêng
+                SoundManager.playSoundEffect("/audio/quaman.wav");
 
                 JOptionPane.showMessageDialog(this, "Chúc mừng! Đội của bạn đã vượt qua Cửa ải " + currentLevel + "!", "Chiến Thắng!", JOptionPane.INFORMATION_MESSAGE);
                 parentFrame.showScreen("LEVEL_SELECT");
@@ -373,7 +352,6 @@ public class GamePanel extends JPanel {
             gameTimer.stop();
             SaveManager.clearSaveFile();
 
-            // PHÁT ÂM THANH GAME OVER KHI THUA CUỘC
             SoundManager.playSoundEffect("/audio/dead2.wav");
 
             JOptionPane.showMessageDialog(this, "Tất cả người chơi đã hy sinh! Trò chơi kết thúc.", "Thua Cuộc", JOptionPane.ERROR_MESSAGE);
