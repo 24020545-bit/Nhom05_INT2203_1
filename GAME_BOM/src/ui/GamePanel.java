@@ -25,7 +25,7 @@ import java.util.Properties;
 public class GamePanel extends JPanel {
 
     private final int TILE_SIZE = 32;
-    private static final int HUD_HEIGHT = 45; // Chiều cao vừa đủ cho 2-3 dòng chữ HUD
+    private static final int HUD_HEIGHT = 45; // Viền phía trên dành cho chữ thông số (HP, Power, Level...)
 
     private final GameFrame parentFrame;
     private final int currentLevel;
@@ -117,6 +117,7 @@ public class GamePanel extends JPanel {
             initDefaultGame(levelIndex, this.playerCount);
         }
 
+        // Tự động căn chỉnh lại kích thước theo Map vừa nạp
         adjustWindowSize();
         loadItemsFromGrid();
 
@@ -160,15 +161,19 @@ public class GamePanel extends JPanel {
     public void adjustWindowSize() {
         if (gameMap == null) return;
 
+        // Tính kích thước thực tế dựa vào độ rộng x độ cao ô của Map cài vào
         int mapWidthPixel = gameMap.getWidth() * TILE_SIZE;
         int mapHeightPixel = gameMap.getHeight() * TILE_SIZE + HUD_HEIGHT;
 
         Dimension dim = new Dimension(mapWidthPixel, mapHeightPixel);
+
+        // Thiết lập kích thước lý tưởng cho Panel
         setPreferredSize(dim);
         setMinimumSize(dim);
+        setSize(dim);
 
         if (parentFrame != null) {
-            parentFrame.revalidate();
+            parentFrame.getContentPane().setPreferredSize(dim);
             parentFrame.pack();
             parentFrame.setLocationRelativeTo(null);
         }
@@ -256,44 +261,72 @@ public class GamePanel extends JPanel {
         initBots(levelIndex, numPlayers);
     }
 
+
     private void initBots(int levelIndex, int numPlayers) {
         BotSpawner.setGrid(gameMap.getGrid());
 
         switch (levelIndex) {
-            case 1 -> {
-                BotSpawner.spawn("Doll", 5, 3, levelIndex, numPlayers);
-                if (numPlayers >= 2) {
-                    BotSpawner.spawn("Doll", 10, 5, levelIndex, numPlayers);
-                }
-            }
-            case 2 -> {
-                BotSpawner.spawn("Doll", 5, 3, levelIndex, numPlayers);
-                BotSpawner.spawn("Kondoria", 7, 3, levelIndex, numPlayers);
-                if (numPlayers >= 2) {
-                    BotSpawner.spawn("Kondoria", 12, 7, levelIndex, numPlayers);
-                }
-            }
-            case 3 -> {
-                BotSpawner.spawn("Boss", 9, 5, levelIndex, numPlayers);
-                BotSpawner.spawn("Kondoria", 2, 2, levelIndex, numPlayers);
-            }
-            case 4 -> {
-                BotSpawner.spawn("Doll", 3, 3, levelIndex, numPlayers);
-                BotSpawner.spawn("Doll", 12, 8, levelIndex, numPlayers);
-                BotSpawner.spawn("Kondoria", 8, 4, levelIndex, numPlayers);
-            }
-            case 5 -> {
-                BotSpawner.spawn("Boss", 10, 5, levelIndex, numPlayers);
-                BotSpawner.spawn("Kondoria", 4, 3, levelIndex, numPlayers);
-                BotSpawner.spawn("Kondoria", 15, 8, levelIndex, numPlayers);
-            }
-            default -> {
-                BotSpawner.spawn("Doll", 3, 3, levelIndex, numPlayers);
-                BotSpawner.spawn("Kondoria", 10, 8, levelIndex, numPlayers);
-                BotSpawner.spawn("Boss", 11, 5, levelIndex, numPlayers);
-            }
+            case 1:
+                BotSpawner.spawn("Doll", 19, 1, levelIndex, numPlayers);
+                BotSpawner.spawn("Doll", 1, 19, levelIndex, numPlayers);
+                BotSpawner.spawn("Kondoria", 10, 9, levelIndex, numPlayers);
+                BotSpawner.spawn("Kondoria", 2, 11, levelIndex, numPlayers);
+                break;
+
+            case 2:
+                BotSpawner.spawn("Doll", 18, 1, levelIndex, numPlayers);
+                BotSpawner.spawn("Doll", 2, 17, levelIndex, numPlayers);
+                BotSpawner.spawn("Kondoria", 9, 8, levelIndex, numPlayers);
+                BotSpawner.spawn("Kondoria", 17, 9, levelIndex, numPlayers);
+                break;
+
+            case 3:
+                BotSpawner.spawn("Boss", 8, 18, levelIndex, numPlayers);
+                BotSpawner.spawn("Doll", 19, 2, levelIndex, numPlayers);
+                BotSpawner.spawn("Doll", 28, 7, levelIndex, numPlayers);
+                BotSpawner.spawn("Kondoria", 18, 14, levelIndex, numPlayers);
+                BotSpawner.spawn("Kondoria", 10, 6, levelIndex, numPlayers);
+                break;
+
+            case 4:
+                BotSpawner.spawn("Boss", 16, 2, levelIndex, numPlayers);
+                BotSpawner.spawn("Doll", 7, 11, levelIndex, numPlayers);
+                BotSpawner.spawn("Doll", 26, 1, levelIndex, numPlayers);
+                BotSpawner.spawn("Kondoria", 17, 11, levelIndex, numPlayers);
+                BotSpawner.spawn("Kondoria", 9, 4, levelIndex, numPlayers);
+                break;
+
+            case 5:
+                BotSpawner.spawn("Boss", 15, 10, levelIndex, numPlayers);
+
+                BotSpawner.spawn("Doll", 26, 2, levelIndex, numPlayers);
+                BotSpawner.spawn("Doll", 3, 17, levelIndex, numPlayers);
+                BotSpawner.spawn("Doll", 15, 17, levelIndex, numPlayers);
+
+                BotSpawner.spawn("Kondoria", 24, 10, levelIndex, numPlayers);
+                BotSpawner.spawn("Kondoria", 6, 8, levelIndex, numPlayers);
+                break;
+
+            case 6:
+                BotSpawner.spawn("Boss", 7, 6, levelIndex, numPlayers);
+                BotSpawner.spawn("Boss", 22, 12, levelIndex, numPlayers);
+
+                BotSpawner.spawn("Doll", 2, 2, levelIndex, numPlayers);
+                BotSpawner.spawn("Doll", 27, 17, levelIndex, numPlayers);
+
+                BotSpawner.spawn("Kondoria", 5, 12, levelIndex, numPlayers);
+                BotSpawner.spawn("Kondoria", 24, 7, levelIndex, numPlayers);
+                BotSpawner.spawn("Kondoria", 14, 5, levelIndex, numPlayers);
+                break;
+
+            default:
+                BotSpawner.spawn("Boss", 16, 2, levelIndex, numPlayers);
+                BotSpawner.spawn("Doll", 7, 11, levelIndex, numPlayers);
+                BotSpawner.spawn("Kondoria", 17, 11, levelIndex, numPlayers);
+                break;
         }
     }
+
 
     private void updateGame() {
         if (isLevelCompleted) return;
@@ -364,10 +397,7 @@ public class GamePanel extends JPanel {
 
         g2d.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
 
-        int mapWidthPixel = gameMap.getWidth() * TILE_SIZE;
-        int offsetX = Math.max(0, (getWidth() - mapWidthPixel) / 2);
-
-        // 1. VẼ THANH HUD TẠI VỊ TRÍ GÓC TÊN TRÊN
+        // 1. VẼ THÔNG SỐ HUD PHÍA TRÊN MẮT ĐẦU TỪ TỌA ĐỘ (10, 15)
         g2d.setColor(Color.WHITE);
         g2d.setFont(new Font("Arial", Font.BOLD, 13));
 
@@ -379,14 +409,14 @@ public class GamePanel extends JPanel {
                     "P" + (i + 1) + " | HP: " + p.getHp()
                             + " | Sức mạnh: " + p.getPower()
                             + " | Tốc độ: " + p.getSpeed() + status,
-                    offsetX + 10, yText
+                    10, yText
             );
             yText += 15;
         }
-        g2d.drawString("Cửa ải: " + currentLevel + " [ESC để lưu & thoát]", offsetX + 10, yText);
+        g2d.drawString("Cửa ải: " + currentLevel + " [ESC để lưu & thoát]", 10, yText);
 
-        // 2. VẼ GAME MAP VÀ ENTITY NGAY DƯỚI THANH HUD
-        g2d.translate(offsetX, HUD_HEIGHT);
+        // 2. VẼ BẢN ĐỒ TỰ ĐỘNG BẮT ĐẦU TỪ Y = HUD_HEIGHT (DƯỚI THANH CHỮ)
+        g2d.translate(0, HUD_HEIGHT);
 
         gameMap.draw(g2d);
 
@@ -402,6 +432,6 @@ public class GamePanel extends JPanel {
             mob.draw(g2d);
         }
 
-        g2d.translate(-offsetX, -HUD_HEIGHT);
+        g2d.translate(0, -HUD_HEIGHT);
     }
 }

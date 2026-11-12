@@ -3,8 +3,7 @@ package bomb;
 import entity.Player;
 import entity.mob.Mob;
 import entity.mob.Mobs;
-import utils.SoundManager; // THÊM IMPORT
-
+import utils.SoundManager;
 import java.awt.Graphics2D;
 import java.awt.Image;
 import java.awt.Rectangle;
@@ -13,20 +12,23 @@ import java.util.List;
 import javax.swing.ImageIcon;
 
 public class Bomb {
+    public static final int TILE_EMPTY = 0;
+    public static final int TILE_BRICK = 1;
+    public static final int TILE_WALL = 2;
+    public static final int TILE_BOMB_PLAYER_ON = 3; // Bom vừa đặt, Player đang đứng đè lên
+    public static final int TILE_BOMB_SOLID = 4;     // Bom cứng, chặn cả Player và Bot
+
     private final double x;
     private final double y;
     private final int[][] mapHash;
     private final List<Bomb> globalBombs;
     private final int TILE_SIZE = 32;
-
     private int fuseTimer = 0;
     private int explodeTimer = 0;
     private boolean exploded = false;
     private boolean active = true;
-
     private final int explosionRange;
     private final int damage;
-
     private int flameLeft = 0;
     private int flameRight = 0;
     private int flameUp = 0;
@@ -35,7 +37,6 @@ public class Bomb {
     private final Image[] bombImages = new Image[5];
     private int animIndex = 0;
     private int animTimer = 0;
-
     private Image flameMid;
     private Image flameHorizontal;
     private Image flameVertical;
@@ -52,9 +53,8 @@ public class Bomb {
         this.globalBombs = globalBombs;
         this.explosionRange = explosionRange;
         this.damage = damage;
-
         loadImages();
-        updateMapHash(5);
+        updateMapHash(TILE_BOMB_PLAYER_ON);
     }
 
     /** Tải toàn bộ tài nguyên hình ảnh bom và hiệu ứng lửa */
@@ -66,7 +66,6 @@ public class Bomb {
                     bombImages[i] = new ImageIcon(imgUrl).getImage();
                 }
             }
-
             flameMid = loadImageSafely("/BombImage/flame_mid.png");
             flameHorizontal = loadImageSafely("/BombImage/flame_h.png");
             flameVertical = loadImageSafely("/BombImage/flame_v.png");
@@ -74,7 +73,6 @@ public class Bomb {
             flameBot = loadImageSafely("/BombImage/flame_bot.png");
             flameLeftImg = loadImageSafely("/BombImage/flame_left.png");
             flameRightImg = loadImageSafely("/BombImage/flame_right.png");
-
         } catch (Exception e) {
             System.err.println("Lỗi tải tài nguyên hình ảnh Bomb/Flame: " + e.getMessage());
         }
@@ -93,23 +91,19 @@ public class Bomb {
     /** Cập nhật trạng thái của bom theo từng khung hình (tick) */
     public void update() {
         if (!active) return;
-
         animTimer++;
         if (animTimer >= 6) {
             animIndex = (animIndex + 1) % 5;
             animTimer = 0;
         }
-
         int j = (int) (x / TILE_SIZE);
         int i = (int) (y / TILE_SIZE);
-
         if (!exploded) {
             if (isPlayerStandingOnThisTile(j, i)) {
-                mapHash[i][j] = 0;
+                mapHash[i][j] = TILE_BOMB_PLAYER_ON;
             } else {
-                mapHash[i][j] = 4;
+                mapHash[i][j] = TILE_BOMB_SOLID;
             }
-
             fuseTimer++;
             if (fuseTimer >= 70) {
                 explode();
@@ -117,9 +111,8 @@ public class Bomb {
         } else {
             explodeTimer++;
             checkFlameDamage();
-
             if (explodeTimer >= 20) {
-                updateMapHash(0);
+                clearBombFromMapHash();
                 active = false;
             }
         }
@@ -131,7 +124,6 @@ public class Bomb {
             if (mob.isSurvival() && mob instanceof Player) {
                 Rectangle playerBounds = mob.getBounds();
                 Rectangle bombTileBounds = new Rectangle(bombTileX * TILE_SIZE, bombTileY * TILE_SIZE, TILE_SIZE, TILE_SIZE);
-
                 if (playerBounds.intersects(bombTileBounds)) {
                     return true;
                 }
@@ -153,9 +145,7 @@ public class Bomb {
         exploded = true;
         explodeTimer = 0;
         calculateFlameRange();
-        updateMapHash(0);
-
-        // THÊM: Gọi hàm phát âm thanh bom nổ
+        clearBombFromMapHash();
         SoundManager.playSoundEffect("/audio/boom.wav");
     }
 
@@ -173,26 +163,34 @@ public class Bomb {
         }
     }
 
+    /** Kiểm tra ô tia lửa có thể đi xuyên qua hay không (ô trống, bom khác, item 5..9) */
+    private boolean canFlamePassThrough(int tileVal) {
+        return tileVal == TILE_EMPTY
+                || tileVal == TILE_BOMB_PLAYER_ON
+                || tileVal == TILE_BOMB_SOLID
+                || (tileVal >= 5 && tileVal <= 9);
+    }
+
     /** Tính toán phạm vi lan rộng của tia lửa theo 4 hướng */
     private void calculateFlameRange() {
         int tileX = (int) (x / TILE_SIZE);
         int tileY = (int) (y / TILE_SIZE);
-
-        flameRight = 0; flameLeft = 0; flameUp = 0; flameDown = 0;
+        flameRight = 0;
+        flameLeft = 0;
+        flameUp = 0;
+        flameDown = 0;
 
         for (int i = 1; i <= explosionRange; i++) {
             int targetX = tileX + i;
             if (targetX >= mapHash[0].length) break;
-
             checkAndTriggerOtherBomb(targetX, tileY);
-
             int tileVal = mapHash[tileY][targetX];
-            if (tileVal == 0 || tileVal == 4 || tileVal == 5) {
+            if (canFlamePassThrough(tileVal)) {
                 flameRight++;
             } else {
-                if (tileVal == 1 || tileVal == 3) {
+                if (tileVal == TILE_BRICK) {
                     flameRight++;
-                    mapHash[tileY][targetX] = 0;
+                    mapHash[tileY][targetX] = TILE_EMPTY;
                 }
                 break;
             }
@@ -201,16 +199,14 @@ public class Bomb {
         for (int i = 1; i <= explosionRange; i++) {
             int targetX = tileX - i;
             if (targetX < 0) break;
-
             checkAndTriggerOtherBomb(targetX, tileY);
-
             int tileVal = mapHash[tileY][targetX];
-            if (tileVal == 0 || tileVal == 4 || tileVal == 5) {
+            if (canFlamePassThrough(tileVal)) {
                 flameLeft++;
             } else {
-                if (tileVal == 1 || tileVal == 3) {
+                if (tileVal == TILE_BRICK) {
                     flameLeft++;
-                    mapHash[tileY][targetX] = 0;
+                    mapHash[tileY][targetX] = TILE_EMPTY;
                 }
                 break;
             }
@@ -219,16 +215,14 @@ public class Bomb {
         for (int i = 1; i <= explosionRange; i++) {
             int targetY = tileY - i;
             if (targetY < 0) break;
-
             checkAndTriggerOtherBomb(tileX, targetY);
-
             int tileVal = mapHash[targetY][tileX];
-            if (tileVal == 0 || tileVal == 4 || tileVal == 5) {
+            if (canFlamePassThrough(tileVal)) {
                 flameUp++;
             } else {
-                if (tileVal == 1 || tileVal == 3) {
+                if (tileVal == TILE_BRICK) {
                     flameUp++;
-                    mapHash[targetY][tileX] = 0;
+                    mapHash[targetY][tileX] = TILE_EMPTY;
                 }
                 break;
             }
@@ -237,16 +231,14 @@ public class Bomb {
         for (int i = 1; i <= explosionRange; i++) {
             int targetY = tileY + i;
             if (targetY >= mapHash.length) break;
-
             checkAndTriggerOtherBomb(tileX, targetY);
-
             int tileVal = mapHash[targetY][tileX];
-            if (tileVal == 0 || tileVal == 4 || tileVal == 5) {
+            if (canFlamePassThrough(tileVal)) {
                 flameDown++;
             } else {
-                if (tileVal == 1 || tileVal == 3) {
+                if (tileVal == TILE_BRICK) {
                     flameDown++;
-                    mapHash[targetY][tileX] = 0;
+                    mapHash[targetY][tileX] = TILE_EMPTY;
                 }
                 break;
             }
@@ -256,17 +248,12 @@ public class Bomb {
     /** Kiểm tra va chạm của lửa để gây sát thương lên các thực thể */
     private void checkFlameDamage() {
         if (explodeTimer % 15 != 0) return;
-
         Rectangle bombCenterRect = getBounds();
-
         for (Mob mob : Mobs.MOBS) {
             if (!mob.isSurvival()) continue;
-
             boolean hit = false;
             Rectangle mobBounds = mob.getBounds();
-
             if (mobBounds.intersects(bombCenterRect)) hit = true;
-
             for (int i = 1; i <= flameRight; i++) {
                 if (mobBounds.intersects(new Rectangle((int) x + i * TILE_SIZE, (int) y, TILE_SIZE, TILE_SIZE))) hit = true;
             }
@@ -279,7 +266,6 @@ public class Bomb {
             for (int i = 1; i <= flameDown; i++) {
                 if (mobBounds.intersects(new Rectangle((int) x, (int) y + i * TILE_SIZE, TILE_SIZE, TILE_SIZE))) hit = true;
             }
-
             if (hit) {
                 mob.takeDamage(this.damage);
             }
@@ -289,10 +275,8 @@ public class Bomb {
     /** Vẽ hình ảnh quả bom hoặc hiệu ứng lửa lên màn hình */
     public void draw(Graphics2D g2d) {
         if (!active) return;
-
         int ix = (int) x;
         int iy = (int) y;
-
         if (!exploded) {
             if (bombImages[animIndex] != null) {
                 g2d.drawImage(bombImages[animIndex], ix, iy, TILE_SIZE, TILE_SIZE, null);
@@ -303,7 +287,6 @@ public class Bomb {
         } else {
             if (flameMid != null) {
                 g2d.drawImage(flameMid, ix, iy, TILE_SIZE, TILE_SIZE, null);
-
                 for (int i = 1; i <= flameRight; i++) {
                     if (i == flameRight) {
                         g2d.drawImage(flameRightImg, ix + i * TILE_SIZE, iy, TILE_SIZE, TILE_SIZE, null);
@@ -311,7 +294,6 @@ public class Bomb {
                         g2d.drawImage(flameHorizontal, ix + i * TILE_SIZE, iy, TILE_SIZE, TILE_SIZE, null);
                     }
                 }
-
                 for (int i = 1; i <= flameLeft; i++) {
                     if (i == flameLeft) {
                         g2d.drawImage(flameLeftImg, ix - i * TILE_SIZE, iy, TILE_SIZE, TILE_SIZE, null);
@@ -319,7 +301,6 @@ public class Bomb {
                         g2d.drawImage(flameHorizontal, ix - i * TILE_SIZE, iy, TILE_SIZE, TILE_SIZE, null);
                     }
                 }
-
                 for (int i = 1; i <= flameDown; i++) {
                     if (i == flameDown) {
                         g2d.drawImage(flameBot, ix, iy + i * TILE_SIZE, TILE_SIZE, TILE_SIZE, null);
@@ -327,7 +308,6 @@ public class Bomb {
                         g2d.drawImage(flameVertical, ix, iy + i * TILE_SIZE, TILE_SIZE, TILE_SIZE, null);
                     }
                 }
-
                 for (int i = 1; i <= flameUp; i++) {
                     if (i == flameUp) {
                         g2d.drawImage(flameTop, ix, iy - i * TILE_SIZE, TILE_SIZE, TILE_SIZE, null);
@@ -360,12 +340,25 @@ public class Bomb {
         }
     }
 
-    /** Trả về trạng thái hoạt động của bom */
+    /** Chỉ xóa bom khỏi mapHash nếu ô đó đang chứa giá trị của bom (3 hoặc 4) */
+    private void clearBombFromMapHash() {
+        try {
+            int j = (int) (x / TILE_SIZE);
+            int i = (int) (y / TILE_SIZE);
+            if (mapHash != null && i >= 0 && i < mapHash.length && j >= 0 && j < mapHash[0].length) {
+                if (mapHash[i][j] == TILE_BOMB_PLAYER_ON || mapHash[i][j] == TILE_BOMB_SOLID) {
+                    mapHash[i][j] = TILE_EMPTY;
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Lỗi xóa bomb khỏi mapHash: " + e.getMessage());
+        }
+    }
+
     public boolean isActive() {
         return active;
     }
 
-    /** Trả về trạng thái quả bom đã phát nổ hay chưa */
     public boolean isExploded() {
         return exploded;
     }

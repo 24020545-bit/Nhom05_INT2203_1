@@ -33,7 +33,7 @@ public class Player extends Mob {
     private String playerName = "Player";
 
     public Player(double startX, double startY, int[][] mapHash) {
-        super(startX, startY, PLAYER_WIDTH, PLAYER_HEIGHT, 3, 1, 3, 10, 1);
+        super(startX, startY, PLAYER_WIDTH, PLAYER_HEIGHT, 3, 2, 3, 20, 2);
         this.mapHash = mapHash;
         loadImages();
     }
@@ -121,7 +121,7 @@ public class Player extends Mob {
         }
 
         // Vẽ tên và thanh HP trên đầu Player
-        g2d.setFont(new Font("Arial", Font.BOLD, 10));
+        g2d.setFont(new Font("Arial", Font.BOLD, 20));
 
         g2d.setColor(Color.YELLOW);
         g2d.drawString(playerName, (int) x - 2, (int) y - 12);
@@ -191,8 +191,9 @@ public class Player extends Mob {
     }
 
     private boolean isWalkable(int tileValue) {
-        // Chỉ chặn tường gạch (1) và tường cố định (2). Cho phép đi qua đường trống (0) và các loại item (5-9)
-        return tileValue != 1 && tileValue != 2 && tileValue != 4;
+        // 0: đường trống, 3: bom vừa đặt (cho phép bước ra), 5..9: item
+        // 1: tường gạch, 2: tường cứng, 4: bom cứng -> chặn
+        return tileValue == 0 || tileValue == 3 || (tileValue >= 5 && tileValue <= 9);
     }
 
     @Override

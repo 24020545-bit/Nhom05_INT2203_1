@@ -54,20 +54,29 @@ public class GameMap {
      * Cửa ải 5, 6 dùng Map index 2...
      * Tự động tạo bản sao (Deep Copy) để phá gạch màn trước không làm hỏng màn sau.
      */
+
     public void loadLevelMap(int levelIndex) {
-        if (mapList.isEmpty()) return;
+        if (mapList.isEmpty()) {
+            return;
+        }
 
-        // Tính toán index map dựa vào levelIndex (mỗi 2 level đổi 1 map)
-        int mapIndex = (levelIndex - 1) / 2;
+        // Mỗi level sử dụng một bản đồ riêng
+        int mapIndex = levelIndex - 1;
 
-        // Đảm bảo không bị out of bounds nếu levelIndex quá lớn
+        // Nếu level vượt quá số bản đồ hiện có,
+        // sử dụng bản đồ cuối cùng
+        if (mapIndex < 0) {
+            mapIndex = 0;
+        }
+
         if (mapIndex >= mapList.size()) {
             mapIndex = mapList.size() - 1;
         }
 
-        // Deep copy bản đồ gốc để biến đổi ô gạch độc lập giữa các màn
+        // Tạo bản sao để mỗi lần chơi không ảnh hưởng map gốc
         this.currentGrid = copyGrid(mapList.get(mapIndex));
     }
+
 
     /**
      * Phương thức sao chép mảng 2 chiều để tránh gán trùng tham chiếu (Reference)

@@ -52,7 +52,8 @@ public class LevelSelectScreen extends JPanel {
             levelBtn.setFont(new Font("Arial", Font.BOLD, 16));
             levelBtn.setFocusPainted(false);
 
-            if (i <= unlockedLevel) {
+            // Đang mở tạm toàn bộ map để test; xem xong đổi lại thành: if (i <= unlockedLevel)
+            if (true) {
                 levelBtn.setBackground(new Color(60, 179, 113));
                 levelBtn.setForeground(Color.WHITE);
                 levelBtn.setEnabled(true);
@@ -61,7 +62,7 @@ public class LevelSelectScreen extends JPanel {
                 levelBtn.setBackground(new Color(128, 128, 128));
                 levelBtn.setForeground(Color.LIGHT_GRAY);
                 levelBtn.setEnabled(false);
-                levelBtn.setText("🔒 Cửa ải " + i);
+                levelBtn.setText("Cửa ải " + i + " (Khóa)");
             }
 
             gridPanel.add(levelBtn);

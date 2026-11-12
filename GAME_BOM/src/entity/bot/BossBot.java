@@ -23,6 +23,7 @@ public class BossBot extends Mob {
     private static final String IMAGE_PATH = "/Bot/BossBot/";
 
     private final int[][] mapHash;
+    private final int[][] patrolMapHash; // Bản đồ riêng có tường bao quanh vùng tuần tra
     private final int startTileX;
     private final int startTileY;
 
@@ -53,19 +54,50 @@ public class BossBot extends Mob {
         super(x, y, width, height, speed, 0, 0, hp, 0);
 
         this.mapHash = mapHash;
-
         this.startTileX = (int) (x / TILE_SIZE);
         this.startTileY = (int) (y / TILE_SIZE);
+
+        this.patrolMapHash = createPatrolMap();
+        syncPatrolMap();
 
         this.attackCooldown = summonCooldown;
         this.currentDirection = Direction.DOWN;
 
-        // Sử dụng RandomMovement từ package utils
+        // Truyền patrolMapHash để RandomMovement tự đổi hướng khi chạm biên tuần tra
         this.randomMovement = new RandomMovement(
-                x, y, width, height, speed, mapHash
+                x, y, width, height, speed, patrolMapHash
         );
 
         loadImages();
+    }
+
+    // ================= PATROL MAP SYNC =================
+
+    private int[][] createPatrolMap() {
+        if (mapHash == null || mapHash.length == 0) return new int[0][0];
+        return new int[mapHash.length][mapHash[0].length];
+    }
+
+    /**
+     * Đồng bộ trạng thái bản đồ trong vùng tuần tra,
+     * đồng thời khóa cứng (gán = 2) mọi ô nằm ngoài MAX_PATROL_TILES
+     */
+    private void syncPatrolMap() {
+        if (mapHash == null || patrolMapHash.length == 0) return;
+
+        for (int r = 0; r < mapHash.length; r++) {
+            for (int c = 0; c < mapHash[r].length; c++) {
+                boolean insidePatrol =
+                        Math.abs(c - startTileX) <= MAX_PATROL_TILES
+                                && Math.abs(r - startTileY) <= MAX_PATROL_TILES;
+
+                if (insidePatrol) {
+                    patrolMapHash[r][c] = mapHash[r][c];
+                } else {
+                    patrolMapHash[r][c] = 2; // Coi như tường cứng để Boss tự quay đầu
+                }
+            }
+        }
     }
 
     // ================= LOAD IMAGE =================
@@ -83,32 +115,22 @@ public class BossBot extends Mob {
     }
 
     private void loadImages() {
-        String[] directions = {
-                "down", "up", "left", "right"
-        };
+        String[] directions = {"down", "up", "left", "right"};
 
         for (int d = 0; d < directions.length; d++) {
             for (int frame = 0; frame < 4; frame++) {
-                String fileName = directions[d]
-                        + "_0" + (frame + 1) + ".png";
-
+                String fileName = directions[d] + "_0" + (frame + 1) + ".png";
                 moveImgs[d][frame] = loadImage(fileName);
             }
         }
 
         for (int i = 0; i < 3; i++) {
-            summonImgs[i] = loadImage(
-                    "summon_0" + (i + 1) + ".png"
-            );
+            summonImgs[i] = loadImage("summon_0" + (i + 1) + ".png");
         }
     }
 
     // ================= DIRECTION =================
 
-    /**
-     * Lấy chỉ số mảng tương ứng với hướng hiện tại của RandomMovement.
-     * Index 0: DOWN, 1: UP, 2: LEFT, 3: RIGHT
-     */
     private int getDirectionIndex() {
         Direction dir = (randomMovement != null) ? randomMovement.getCurrentDirection() : currentDirection;
         if (dir == null) return 0;
@@ -151,14 +173,11 @@ public class BossBot extends Mob {
 
             if (summonAnimIndex >= summonImgs.length) {
                 isSummoning = false;
-
                 summonAnimIndex = 0;
                 summonAnimTimer = 0;
-
                 animIndex = 0;
                 animTimer = 0;
 
-                // Chỉ sinh quái sau khi hiệu ứng kết thúc
                 spawnMinions();
             }
         }
@@ -170,17 +189,13 @@ public class BossBot extends Mob {
     public void update() {
         if (!survival) return;
 
-        // Xóa những quái đã chết
         summonedMinions.removeIf(minion -> !minion.isSurvival());
 
-        // ĐANG TRIỆU HỒI:
-        // Không di chuyển, không cập nhật RandomMovement
         if (isSummoning) {
             updateSummonAnimation();
             return;
         }
 
-        // Kiểm tra Player và điều kiện sử dụng kỹ năng
         if (isPlayerInDetectionRange() && summonedMinions.isEmpty()) {
             long currentTime = System.currentTimeMillis();
 
@@ -190,35 +205,19 @@ public class BossBot extends Mob {
             }
         }
 
-        // Lưu vị trí trước khi di chuyển
+        // Cập nhật map tuần tra (để nhận biết bom mới đặt hoặc gạch vừa bị phá)
+        syncPatrolMap();
+
         double oldX = x;
         double oldY = y;
 
-        // Cập nhật di chuyển bằng RandomMovement
         randomMovement.update(x, y);
 
-        double nextX = randomMovement.getX();
-        double nextY = randomMovement.getY();
-
-        // Kiểm tra giới hạn tuần tra
-        int nextTileX = (int) (nextX / TILE_SIZE);
-        int nextTileY = (int) (nextY / TILE_SIZE);
-
-        boolean insidePatrolArea =
-                Math.abs(nextTileX - startTileX) <= MAX_PATROL_TILES
-                        && Math.abs(nextTileY - startTileY) <= MAX_PATROL_TILES;
-
-        if (insidePatrolArea) {
-            x = nextX;
-            y = nextY;
-        }
-
-        // Đồng bộ hướng di chuyển từ RandomMovement
+        x = randomMovement.getX();
+        y = randomMovement.getY();
         currentDirection = randomMovement.getCurrentDirection();
 
-        // Kiểm tra xem Boss có đang thực sự di chuyển không
         boolean isMoving = Math.abs(x - oldX) > 0.001 || Math.abs(y - oldY) > 0.001;
-
         updateMoveAnimation(isMoving);
     }
 
@@ -228,15 +227,10 @@ public class BossBot extends Mob {
         if (mapHash == null || mapHash.length == 0) return;
 
         isSummoning = true;
-
         summonAnimIndex = 0;
         summonAnimTimer = 0;
-
-        // Reset animation di chuyển
         animIndex = 0;
         animTimer = 0;
-
-        // Đánh dấu thời điểm bắt đầu hồi chiêu
         lastAttackTime = System.currentTimeMillis();
     }
 
@@ -281,7 +275,6 @@ public class BossBot extends Mob {
 
         if (activePlayers.length == 0) return;
 
-        // 4 ô xung quanh Boss
         int[][] offsets = {
                 {1, 0},
                 {-1, 0},
@@ -303,7 +296,6 @@ public class BossBot extends Mob {
                 continue;
             }
 
-            // Chỉ sinh quái ở ô trống
             if (mapHash[spawnTileY][spawnTileX] != 0) {
                 continue;
             }
@@ -339,7 +331,6 @@ public class BossBot extends Mob {
     @Override
     public void move(Direction direction) {
         if (isSummoning) return;
-
         currentDirection = direction;
     }
 
@@ -351,7 +342,6 @@ public class BossBot extends Mob {
 
         Image currentImg;
 
-        // Đang triệu hồi
         if (isSummoning) {
             currentImg = summonImgs[summonAnimIndex];
         } else {
@@ -359,16 +349,8 @@ public class BossBot extends Mob {
             currentImg = moveImgs[directionIndex][animIndex];
         }
 
-        // Vẽ Boss
         if (currentImg != null) {
-            g2d.drawImage(
-                    currentImg,
-                    (int) x,
-                    (int) y,
-                    width,
-                    height,
-                    null
-            );
+            g2d.drawImage(currentImg, (int) x, (int) y, width, height, null);
         } else {
             g2d.setColor(Color.MAGENTA);
             g2d.fillRect((int) x, (int) y, width, height);
@@ -379,7 +361,6 @@ public class BossBot extends Mob {
 
         if (!survival) return;
 
-        // Thanh máu
         int barHeight = 5;
         int barY = (int) y - 8;
 
@@ -387,10 +368,7 @@ public class BossBot extends Mob {
         g2d.fillRect((int) x, barY, width, barHeight);
 
         if (maxHp > 0) {
-            int hpWidth = (int) (
-                    width * Math.max(0, Math.min(1, (double) hp / maxHp))
-            );
-
+            int hpWidth = (int) (width * Math.max(0, Math.min(1, (double) hp / maxHp)));
             g2d.setColor(Color.GREEN);
             g2d.fillRect((int) x, barY, hpWidth, barHeight);
         }
