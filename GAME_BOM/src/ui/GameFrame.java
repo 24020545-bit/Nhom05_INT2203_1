@@ -5,7 +5,6 @@ import ui.screen.*;
 import javax.swing.*;
 import java.awt.*;
 import java.util.Properties;
-// Thêm thư viện âm thanh
 import javax.sound.sampled.AudioInputStream;
 import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.Clip;
@@ -21,13 +20,14 @@ public class GameFrame extends JFrame {
     private LevelSelectScreen levelSelectScreen;
 
     private int playerCount = 1;
-    private Clip bgClip; // Thêm biến lưu clip nhạc
+    private Clip bgClip;
 
     public GameFrame() {
         utils.SaveManager.loadGame();
         setTitle("Bomberman Game");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
+        // Kích thước mặc định khi mở game
         setSize(800, 600);
         setResizable(true);
 
@@ -53,7 +53,7 @@ public class GameFrame extends JFrame {
         setLocationRelativeTo(null);
     }
 
-    // THÊM: Hàm phát nhạc
+    // Hàm phát nhạc
     public void playMenuMusic() {
         try {
             if (bgClip != null && bgClip.isRunning()) return;
@@ -73,7 +73,7 @@ public class GameFrame extends JFrame {
         }
     }
 
-    // THÊM: Hàm dừng nhạc
+    // Hàm dừng nhạc
     public void stopMenuMusic() {
         if (bgClip != null && bgClip.isRunning()) {
             bgClip.stop();
@@ -81,16 +81,19 @@ public class GameFrame extends JFrame {
     }
 
     public void showScreen(String name) {
-        if (name.equals("LEVEL_SELECT") || name.equals("HOME") || name.equals("GAME_SETTING") || name.equals("KEY_BIND")) {
+        if (name.equals("LEVEL_SELECT")) {
+            // Đổi sang kích thước 1024x576 khớp với tỷ lệ ảnh nền Chọn Cửa Ải
+            setSize(1024, 576);
+            setLocationRelativeTo(null);
+            // Gọi buildLevelButtons() để cập nhật trạng thái mở/khóa mới nhất của các ải
+            levelSelectScreen.buildLevelButtons();
+        } else if (name.equals("HOME") || name.equals("GAME_SETTING") || name.equals("KEY_BIND")) {
+            // Trả về kích thước 800x600 cho các màn hình menu khác (hoặc đổi thành 1024, 576 nếu bạn muốn đồng bộ tất cả)
             setSize(800, 600);
             setLocationRelativeTo(null);
         }
 
-        if (name.equals("LEVEL_SELECT")) {
-            levelSelectScreen.buildLevelButtons();
-        }
-
-        // THÊM: Kiểm tra nếu quay lại các màn hình menu thì tiếp tục bật nhạc (nếu đang tắt)
+        // Tiếp tục bật nhạc nếu đang ở các màn hình menu
         if (name.equals("HOME") || name.equals("GAME_SETTING") || name.equals("KEY_BIND") || name.equals("LEVEL_SELECT")) {
             playMenuMusic();
         }
@@ -107,7 +110,7 @@ public class GameFrame extends JFrame {
     }
 
     public void startLevel(int levelIndex) {
-        // THÊM: Tắt nhạc khi bắt đầu vào chơi game
+        // Tắt nhạc menu khi vào chơi game
         stopMenuMusic();
 
         GamePanel gamePanel = new GamePanel(this, levelIndex, playerCount);
@@ -119,7 +122,7 @@ public class GameFrame extends JFrame {
     }
 
     public void startLevelWithSave(int levelIndex, Properties saveProps) {
-        // THÊM: Tắt nhạc khi tải lại game dở
+        // Tắt nhạc menu khi tải lại ván chơi dở
         stopMenuMusic();
 
         GamePanel gamePanel = new GamePanel(this, levelIndex, playerCount, saveProps);
