@@ -309,14 +309,14 @@ public class BossBot extends Mob {
                 minion = new KondoriaBot(
                         spawnX, spawnY,
                         TILE_SIZE, TILE_SIZE,
-                        1, 3, 1, 1000,
+                        this.getSpeed(), (int)(this.getHp()*0.25), 1, 1000,
                         activePlayers, mapHash
                 );
             } else {
                 minion = new DollBot(
                         spawnX, spawnY,
                         TILE_SIZE, TILE_SIZE,
-                        1, 3, 1, 1000,
+                        (int)(this.getSpeed()+1), (int)(this.getHp()*0.25), 1, 1000,
                         activePlayers, mapHash
                 );
             }
@@ -361,16 +361,7 @@ public class BossBot extends Mob {
 
         if (!survival) return;
 
-        int barHeight = 5;
-        int barY = (int) y - 8;
-
-        g2d.setColor(Color.DARK_GRAY);
-        g2d.fillRect((int) x, barY, width, barHeight);
-
-        if (maxHp > 0) {
-            int hpWidth = (int) (width * Math.max(0, Math.min(1, (double) hp / maxHp)));
-            g2d.setColor(Color.GREEN);
-            g2d.fillRect((int) x, barY, hpWidth, barHeight);
-        }
+        // Vẽ thanh máu sử dụng hàm chung từ lớp Mob với chiều cao là 5
+        drawHpBar(g2d, width, 5);
     }
 }

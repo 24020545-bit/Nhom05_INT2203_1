@@ -1,5 +1,6 @@
 package utils;
 
+import bomb.Bomb;
 import java.util.Random;
 
 public class RandomMovement {
@@ -10,10 +11,12 @@ public class RandomMovement {
     private int[][] mapHash;
 
     private Direction currentDirection;
-    private double moveHori = 0;
-    private double moveVerti = 0;
-    private int changeDirCounter = 0;
-    private Random random;
+    private int targetCol = -1;
+    private int targetRow = -1;
+    private boolean moving = false;
+    private final Random random;
+
+    private static final double EPSILON = 0.01;
 
     public RandomMovement(double x, double y, int width, int height, double speed, int[][] mapHash) {
         this.x = x;
@@ -23,137 +26,175 @@ public class RandomMovement {
         this.speed = speed;
         this.mapHash = mapHash;
         this.random = new Random();
-        this.currentDirection = getRandomDirection();
-        updateVelocity(this.currentDirection);
+        this.currentDirection = Direction.LEFT;
     }
 
+    // ==================== GRID & POSITION ====================
+    private double getCellX(int col) {
+        return col * TILE_SIZE + (TILE_SIZE - width) / 2.0;
+    }
+
+    private double getCellY(int row) {
+        return row * TILE_SIZE + (TILE_SIZE - height) / 2.0;
+    }
+
+    private int getCurrentCol() {
+        return (int) Math.round((x + width / 2.0) / TILE_SIZE - 0.5);
+    }
+
+    private int getCurrentRow() {
+        return (int) Math.round((y + height / 2.0) / TILE_SIZE - 0.5);
+    }
+
+    // ==================== FLOOR CHECK ====================
+    private boolean isWalkableFloorValue(int val) {
+        return val == Bomb.TILE_EMPTY || (val >= 5 && val <= 9);
+    }
+
+    private boolean canMoveOnFloor(double nextX, double nextY) {
+        if (!isValidMap()) return false;
+        int left = (int) Math.floor(nextX / TILE_SIZE);
+        int right = (int) Math.floor((nextX + width - EPSILON) / TILE_SIZE);
+        int top = (int) Math.floor(nextY / TILE_SIZE);
+        int bottom = (int) Math.floor((nextY + height - EPSILON) / TILE_SIZE);
+        int maxRow = mapHash.length - 1;
+        int maxCol = mapHash[0].length - 1;
+
+        if (left < 1 || top < 1 || right >= maxCol || bottom >= maxRow) {
+            return false;
+        }
+
+        for (int row = top; row <= bottom; row++) {
+            for (int col = left; col <= right; col++) {
+                if (!isWalkableFloorValue(mapHash[row][col])) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    private boolean isValidMap() {
+        return mapHash != null
+                && mapHash.length > 0
+                && mapHash[0] != null
+                && mapHash[0].length > 0;
+    }
+
+    // ==================== UPDATE (Học theo KondoriaBot) ====================
     public void update(double currentX, double currentY) {
-        // Đồng bộ vị trí từ bên ngoài vào nếu có
         this.x = currentX;
         this.y = currentY;
 
-        changeDirCounter++;
-        if (changeDirCounter >= 60) { // Thời gian đổi hướng để entity đi sâu vào ô hơn
-            Direction newDir = getRandomDirection();
-            // Chỉ đổi hướng ngay nếu hướng mới hợp lệ hoặc ngược lại
-            if (canChangeDirection(newDir)) {
-                this.currentDirection = newDir;
-                updateVelocity(this.currentDirection);
+        // Nếu đang di chuyển về một ô đích, tiếp tục dịch chuyển tới đó
+        if (moving) {
+            boolean finished = moveToTargetCell();
+            if (finished) {
+                moving = false;
             }
-            changeDirCounter = 0;
+            return;
         }
 
-        // Tính tọa độ dự kiến tiếp theo
-        double nextX = this.x + moveHori;
-        double nextY = this.y + moveVerti;
-
-        // Kiểm tra nếu vị trí tiếp theo đi được
-        if (isValidPosition(nextX, nextY)) {
-            this.x = nextX;
-            this.y = nextY;
-        } else {
-            // Va chạm tường: Snap (bám) vào vị trí tâm/lưới gần nhất hợp lệ và đổi hướng ngẫu nhiên khác
-            snapToGrid();
-            this.currentDirection = getRandomDirection();
-            updateVelocity(this.currentDirection);
-        }
-
-        // Làm tròn số để tránh sai số dấu phẩy động (floating-point precision errors)
-        this.x = Math.round(this.x * 10.0) / 10.0;
-        this.y = Math.round(this.y * 10.0) / 10.0;
+        // Nếu đã đến đích hoặc đứng yên, chọn ngẫu nhiên một hướng đi tiếp theo hợp lệ trên sàn
+        randomMove();
     }
 
-    /**
-     * Kiểm tra xem có thể đổi sang hướng mới tại vị trí hiện tại hay không (bám tâm lưới)
-     */
-    private boolean canChangeDirection(Direction newDir) {
-        // Đổi sang hướng ngược lại thì luôn cho phép
-        if (isOppositeDirection(this.currentDirection, newDir)) return true;
+    private void randomMove() {
+        Direction[] directions = {
+                Direction.UP,
+                Direction.DOWN,
+                Direction.LEFT,
+                Direction.RIGHT
+        };
 
-        // Nếu đang di chuyển ngang muốn đổi sang dọc (hoặc ngược lại),
-        // ta kiểm tra xem entity có đang ở gần tâm đường kẻ lưới theo trục vuông góc không để rẽ mượt.
-        double centerX = Math.round(this.x / TILE_SIZE) * TILE_SIZE;
-        double centerY = Math.round(this.y / TILE_SIZE) * TILE_SIZE;
-
-        // Sai số cho phép khi căn gióng vào tâm lưới để rẽ hướng
-        double threshold = speed * 1.5;
-
-        if (moveHori != 0 && (newDir == Direction.UP || newDir == Direction.DOWN)) {
-            return Math.abs(this.y - centerY) <= threshold;
-        }
-        if (moveVerti != 0 && (newDir == Direction.LEFT || newDir == Direction.RIGHT)) {
-            return Math.abs(this.x - centerX) <= threshold;
+        // Xáo trộn mảng hướng để chọn ngẫu nhiên
+        for (int i = directions.length - 1; i > 0; i--) {
+            int j = random.nextInt(i + 1);
+            Direction temp = directions[i];
+            directions[i] = directions[j];
+            directions[j] = temp;
         }
 
-        return false;
-    }
-
-    private boolean isOppositeDirection(Direction d1, Direction d2) {
-        return (d1 == Direction.UP && d2 == Direction.DOWN) ||
-                (d1 == Direction.DOWN && d2 == Direction.UP) ||
-                (d1 == Direction.LEFT && d2 == Direction.RIGHT) ||
-                (d1 == Direction.RIGHT && d2 == Direction.LEFT);
-    }
-
-    /**
-     * Căn chỉnh (Snap) vị trí hiện tại về ranh giới/tâm tile gần nhất khi gặp vật cản
-     */
-    private void snapToGrid() {
-        int tileX = (int) Math.round(this.x / TILE_SIZE);
-        int tileY = (int) Math.round(this.y / TILE_SIZE);
-
-        // Chỉ snap nếu vị trí snap hợp lệ
-        double snapX = tileX * TILE_SIZE;
-        double snapY = tileY * TILE_SIZE;
-        if (isValidPosition(snapX, snapY)) {
-            this.x = snapX;
-            this.y = snapY;
-        }
-    }
-
-    public boolean isValidPosition(double nextX, double nextY) {
-        if (mapHash == null) return true;
-
-        int leftTile = (int) Math.floor(nextX / TILE_SIZE);
-        int rightTile = (int) Math.floor((nextX + width - 1) / TILE_SIZE);
-        int topTile = (int) Math.floor(nextY / TILE_SIZE);
-        int bottomTile = (int) Math.floor((nextY + height - 1) / TILE_SIZE);
-
-        try {
-            if (topTile < 0 || bottomTile >= mapHash.length || leftTile < 0 || rightTile >= mapHash[0].length) {
-                return false;
+        for (Direction direction : directions) {
+            int col = getCurrentCol();
+            int row = getCurrentRow();
+            switch (direction) {
+                case LEFT -> col--;
+                case RIGHT -> col++;
+                case UP -> row--;
+                case DOWN -> row++;
+                default -> { continue; }
             }
-            int t1 = mapHash[topTile][leftTile];
-            int t2 = mapHash[topTile][rightTile];
-            int t3 = mapHash[bottomTile][leftTile];
-            int t4 = mapHash[bottomTile][rightTile];
 
-            // Ô chứa giá trị 4 hoặc khác 0 là vật cản (tùy theo logic map của bạn)
-            if (t1 == 4 || t2 == 4 || t3 == 4 || t4 == 4) return false;
+            double nextX = getCellX(col);
+            double nextY = getCellY(row);
 
-            return t1 == 0 && t2 == 0 && t3 == 0 && t4 == 0;
-        } catch (Exception e) {
+            // Kiểm tra xem ô tiếp theo có đi được không
+            if (canMoveOnFloor(nextX, nextY)) {
+                currentDirection = direction;
+                setTargetCell(col, row);
+                moveToTargetCell();
+                return;
+            }
+        }
+    }
+
+    private void setTargetCell(int col, int row) {
+        targetCol = col;
+        targetRow = row;
+        moving = true;
+    }
+
+    private boolean moveToTargetCell() {
+        if (targetCol < 0 || targetRow < 0) return true;
+        double targetX = getCellX(targetCol);
+        double targetY = getCellY(targetRow);
+
+        // Dịch chuyển theo trục X trước
+        if (Math.abs(targetX - x) > EPSILON) {
+            double dx = targetX - x;
+            double step = Math.signum(dx) * Math.min(speed, Math.abs(dx));
+            double nextX = x + step;
+            if (!canMoveOnFloor(nextX, y)) {
+                moving = false;
+                return true;
+            }
+            x = nextX;
+            currentDirection = dx < 0 ? Direction.LEFT : Direction.RIGHT;
             return false;
         }
-    }
 
-    private void updateVelocity(Direction dir) {
-        moveHori = 0;
-        moveVerti = 0;
-        switch (dir) {
-            case UP -> moveVerti = -speed;
-            case DOWN -> moveVerti = speed;
-            case LEFT -> moveHori = -speed;
-            case RIGHT -> moveHori = speed;
+        // Dịch chuyển theo trục Y sau
+        if (Math.abs(targetY - y) > EPSILON) {
+            double dy = targetY - y;
+            double step = Math.signum(dy) * Math.min(speed, Math.abs(dy));
+            double nextY = y + step;
+            if (!canMoveOnFloor(x, nextY)) {
+                moving = false;
+                return true;
+            }
+            y = nextY;
+            currentDirection = dy < 0 ? Direction.UP : Direction.DOWN;
+            return false;
         }
+
+        // Đã đến đúng tâm ô
+        x = targetX;
+        y = targetY;
+        moving = false;
+        return true;
     }
 
-    private Direction getRandomDirection() {
-        Direction[] dirs = Direction.values();
-        return dirs[random.nextInt(dirs.length)];
+    // ==================== GETTERS ====================
+    public double getX() {
+        return x;
     }
 
-    public double getX() { return x; }
-    public double getY() { return y; }
-    public Direction getCurrentDirection() { return currentDirection; }
+    public double getY() {
+        return y;
+    }
+
+    public Direction getCurrentDirection() {
+        return currentDirection;
+    }
 }

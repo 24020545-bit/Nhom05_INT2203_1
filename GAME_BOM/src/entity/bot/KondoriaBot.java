@@ -4,6 +4,7 @@ import bomb.Bomb;
 import entity.Player;
 import entity.mob.Mob;
 import utils.Direction;
+import utils.RandomMovement;
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.Image;
@@ -12,7 +13,6 @@ import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
-import java.util.Random;
 import javax.swing.ImageIcon;
 
 public class KondoriaBot extends Mob {
@@ -22,25 +22,23 @@ public class KondoriaBot extends Mob {
 
     private final Player[] players;
     private final int[][] mapHash;
-    private final Random random = new Random();
     private Player currentTarget;
+    private final RandomMovement randomMovement; // Tích hợp RandomMovement vào đây
 
-    // Hướng đi lang thang
-    private Direction wanderDir = Direction.LEFT;
+    private String botName = "KondoriaBot";
 
-    // Vị trí ô đích hiện tại
+    // Vị trí ô đích hiện tại khi đuổi player
     private int targetCol = -1;
     private int targetRow = -1;
     private boolean moving = false;
     private boolean movingIgnoreWalls = false;
 
     // BFS thoát khỏi tường
-    private boolean escapingWall = false;
     private final List<int[]> escapePath = new ArrayList<>();
     private int escapeIndex = 0;
 
     // Thời gian tấn công
-    private long attackCooldown;
+    private final long attackCooldown;
 
     // Animation
     private Image leftImg;
@@ -58,7 +56,19 @@ public class KondoriaBot extends Mob {
         this.mapHash = mapHash;
         this.attackCooldown = attackCooldown;
         this.currentDirection = Direction.LEFT;
+
+        // Khởi tạo RandomMovement cho bot
+        this.randomMovement = new RandomMovement(x, y, width, height, speed, mapHash);
+
         loadImages();
+    }
+
+    public void setBotName(String botName) {
+        this.botName = botName;
+    }
+
+    public String getBotName() {
+        return botName;
     }
 
     // ==================== LOAD IMAGE ====================
@@ -152,22 +162,24 @@ public class KondoriaBot extends Mob {
         }
 
         if (currentTarget != null) {
-            escapingWall = false;
             escapePath.clear();
             escapeIndex = 0;
             chasePlayer();
         } else {
             if (!canMoveOnFloor(x, y)) {
-                escapingWall = true;
                 if (escapePath.isEmpty()) {
                     findEscapePath();
                 }
                 escapeToFloor();
             } else {
-                escapingWall = false;
                 escapePath.clear();
                 escapeIndex = 0;
-                randomMove();
+
+                // Gọi trực tiếp RandomMovement để di chuyển ngẫu nhiên bám lưới
+                randomMovement.update(x, y);
+                this.x = randomMovement.getX();
+                this.y = randomMovement.getY();
+                this.currentDirection = randomMovement.getCurrentDirection();
             }
         }
         updateAnimation();
@@ -249,43 +261,6 @@ public class KondoriaBot extends Mob {
 
         setTargetCell(nextCol, nextRow, true);
         moveToTargetCell(true);
-    }
-
-    // ==================== RANDOM MOVEMENT ====================
-    private void randomMove() {
-        Direction[] directions = {
-                Direction.UP,
-                Direction.DOWN,
-                Direction.LEFT,
-                Direction.RIGHT
-        };
-        for (int i = directions.length - 1; i > 0; i--) {
-            int j = random.nextInt(i + 1);
-            Direction temp = directions[i];
-            directions[i] = directions[j];
-            directions[j] = temp;
-        }
-        for (Direction direction : directions) {
-            int col = getCurrentCol();
-            int row = getCurrentRow();
-            switch (direction) {
-                case LEFT -> col--;
-                case RIGHT -> col++;
-                case UP -> row--;
-                case DOWN -> row++;
-                default -> {
-                    continue;
-                }
-            }
-            double nextX = getCellX(col);
-            double nextY = getCellY(row);
-            if (canMoveOnFloor(nextX, nextY)) {
-                wanderDir = direction;
-                setTargetCell(col, row, false);
-                moveToTargetCell(false);
-                return;
-            }
-        }
     }
 
     // ==================== SET GRID TARGET ====================
@@ -481,7 +456,6 @@ public class KondoriaBot extends Mob {
     }
 
     private void finishEscape() {
-        escapingWall = false;
         escapePath.clear();
         escapeIndex = 0;
         moving = false;
@@ -492,12 +466,10 @@ public class KondoriaBot extends Mob {
     // ==================== BOUNDARY ====================
     private void clampToBounds() {
         if (!isValidMap()) return;
-        double minX = TILE_SIZE;
-        double minY = TILE_SIZE;
         double maxX = (mapHash[0].length - 1) * TILE_SIZE - width;
         double maxY = (mapHash.length - 1) * TILE_SIZE - height;
-        x = Math.max(minX, Math.min(x, maxX));
-        y = Math.max(minY, Math.min(y, maxY));
+        x = Math.clamp(x, TILE_SIZE, maxX);
+        y = Math.clamp(y, TILE_SIZE, maxY);
     }
 
     @Override
@@ -524,5 +496,8 @@ public class KondoriaBot extends Mob {
             g2d.setColor(Color.BLACK);
             g2d.drawRect((int) x, (int) y, width, height);
         }
+
+        // Gọi hàm vẽ thanh máu chung từ class cha Mob
+        drawHpBar(g2d, width, 4);
     }
 }

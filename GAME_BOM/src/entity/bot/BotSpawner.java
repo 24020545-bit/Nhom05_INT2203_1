@@ -46,30 +46,30 @@ public class BotSpawner {
         int playerBonus = numPlayers >= 2 ? 3 : 0;
 
         // Chi so co ban
-        int baseSpeed = 1;
-        int baseHp = 3;
-        int basePower = 1;
-        long baseCooldown = 1500;
+        double baseSpeed=0;
+        double baseHp=0;
+        double basePower=0;
+        double baseCooldown=0;
 
         switch (type) {
             case "Doll":
-                baseSpeed = 2;
-                baseHp = (1 + (levelIndex - 1) * 2) / 2;
-                basePower = 1 + (levelIndex - 1) / 3;
-                baseCooldown = Math.max(400, 1200 - (levelIndex - 1) * 100);
+                baseSpeed = Math.min(5, 2+(levelIndex-1)*0.25);
+                baseHp = 5+(levelIndex-1)*2;
+                basePower = 1*(1+(levelIndex-1)*0.25);
+                baseCooldown = Math.max(500, 1000*(1-(levelIndex-1)*0.05));
                 break;
 
             case "Kondoria":
-                baseSpeed = 1 + (levelIndex - 1) / 4;
-                baseHp = (4 + (levelIndex - 1) * 2) / 2;
-                basePower = 1 + (levelIndex - 1) / 3;
-                baseCooldown = Math.max(300, 1000 - (levelIndex - 1) * 80);
+                baseSpeed = Math.min(4, 1+(levelIndex-1)*0.25);
+                baseHp = 4+(levelIndex-1)*2;
+                basePower = 1+(levelIndex-1)*0.25;
+                baseCooldown = Math.max(750, 1500*(1-(levelIndex-1)*0.05));
                 break;
 
             case "Boss":
-                baseSpeed = 1 + (levelIndex - 1) / 4;
-                baseHp = (25 + (levelIndex - 1) * 10) / 2;
-                baseCooldown = Math.max(3000, 6000 - (levelIndex - 1) * 500);
+                baseSpeed = Math.min(4, 1+(levelIndex-1)*0.25);
+                baseHp = 20+(levelIndex-1)*3;
+                baseCooldown = Math.max(4000, 8000*(1-(levelIndex-1)*0.05));
                 break;
 
             default:
@@ -77,10 +77,10 @@ public class BotSpawner {
         }
 
         // Chi so cuoi cung: su dung so nguyen
-        int finalHp = baseHp + playerBonus;
-        int finalSpeed = baseSpeed;
-        int finalPower = basePower;
-        long finalCooldown = baseCooldown;
+        int finalHp = (int)baseHp + playerBonus;
+        int finalSpeed = (int)baseSpeed;
+        int finalPower = (int)basePower;
+        long finalCooldown = (int)baseCooldown;
 
         double x = tileX * TILE_SIZE;
         double y = tileY * TILE_SIZE;

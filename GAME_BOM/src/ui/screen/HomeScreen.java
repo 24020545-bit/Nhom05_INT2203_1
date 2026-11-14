@@ -10,9 +10,16 @@ public class HomeScreen extends JPanel {
 
     private Image backgroundImage;
 
+    private JButton startBtn;
+    private JButton keyBindBtn;
+
+    // Kích thước màn hình thiết kế ban đầu
+    private final int BASE_WIDTH = 1024;
+    private final int BASE_HEIGHT = 576;
+
     public HomeScreen(GameFrame frame) {
 
-        // Đọc ảnh nền từ thư mục resources
+        // Đọc ảnh nền
         java.net.URL imageURL =
                 getClass().getResource("/Screen/HomeScreen.png");
 
@@ -22,21 +29,12 @@ public class HomeScreen extends JPanel {
             System.out.println("Không tìm thấy HomeScreen.png");
         }
 
-        // Sử dụng GridBagLayout để căn chỉnh các nút
-        setLayout(new GridBagLayout());
+        setLayout(null);
         setOpaque(false);
 
-        GridBagConstraints gbc = new GridBagConstraints();
-
-        gbc.gridx = 0;
-        gbc.gridy = 0;
-        gbc.insets = new Insets(12, 0, 12, 0);
-
-        // Nút bắt đầu
-        JButton startBtn = createButton("BẮT ĐẦU");
-
-        // Nút thiết lập phím
-        JButton keyBindBtn = createButton("THIẾT LẬP PHÍM");
+        // Tạo nút
+        startBtn = createButton("BẮT ĐẦU");
+        keyBindBtn = createButton("THIẾT LẬP PHÍM");
 
         // Xử lý sự kiện
         startBtn.addActionListener(e ->
@@ -45,17 +43,45 @@ public class HomeScreen extends JPanel {
         keyBindBtn.addActionListener(e ->
                 frame.showScreen("KEY_BIND"));
 
-        // Đẩy các nút xuống phía dưới màn hình
-        gbc.gridy = 0;
-        gbc.anchor = GridBagConstraints.PAGE_END;
-        gbc.insets = new Insets(0, 0, 10, 0);
+        add(startBtn);
+        add(keyBindBtn);
 
-        add(startBtn, gbc);
+        // Tự động cập nhật vị trí khi thay đổi kích thước màn hình
+        addComponentListener(new java.awt.event.ComponentAdapter() {
 
-        gbc.gridy = 1;
-        gbc.insets = new Insets(10, 0, 75, 0);
+            @Override
+            public void componentResized(java.awt.event.ComponentEvent e) {
+                updateButtonPosition();
+            }
+        });
+    }
 
-        add(keyBindBtn, gbc);
+    // Cập nhật vị trí và kích thước nút
+    private void updateButtonPosition() {
+
+        double scaleX = (double) getWidth() / BASE_WIDTH;
+        double scaleY = (double) getHeight() / BASE_HEIGHT;
+
+        // Tọa độ và kích thước nút ban đầu
+        int buttonWidth = (int) (260 * scaleX);
+        int buttonHeight = (int) (55 * scaleY);
+
+        int x = (int) (380 * scaleX);
+
+        int startY = (int) (300 * scaleY);
+        int keyBindY = (int) (375 * scaleY);
+
+        // Cập nhật vị trí nút
+        startBtn.setBounds(x, startY, buttonWidth, buttonHeight);
+        keyBindBtn.setBounds(x, keyBindY, buttonWidth, buttonHeight);
+
+        // Cập nhật cỡ chữ
+        int fontSize = Math.max(12, (int) (20 * Math.min(scaleX, scaleY)));
+
+        startBtn.setFont(new Font("Arial", Font.BOLD, fontSize));
+        keyBindBtn.setFont(new Font("Arial", Font.BOLD, fontSize));
+
+        repaint();
     }
 
     // Tạo giao diện nút
@@ -64,18 +90,18 @@ public class HomeScreen extends JPanel {
         JButton btn = new JButton(text);
 
         btn.setFont(new Font("Arial", Font.BOLD, 20));
-        btn.setPreferredSize(new Dimension(260, 55));
 
         btn.setForeground(Color.WHITE);
         btn.setBackground(new Color(220, 65, 35));
 
         btn.setFocusPainted(false);
+
         btn.setBorder(BorderFactory.createLineBorder(
                 new Color(255, 190, 70), 3));
 
         btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
-        // Hiệu ứng khi di chuột vào nút
+        // Hiệu ứng khi di chuột
         btn.addMouseListener(new java.awt.event.MouseAdapter() {
 
             @Override
@@ -102,13 +128,11 @@ public class HomeScreen extends JPanel {
 
             Graphics2D g2d = (Graphics2D) g.create();
 
-            // Làm ảnh mượt khi phóng to, thu nhỏ
             g2d.setRenderingHint(
                     RenderingHints.KEY_INTERPOLATION,
                     RenderingHints.VALUE_INTERPOLATION_BILINEAR
             );
 
-            // Vẽ ảnh phủ toàn bộ màn hình
             g2d.drawImage(
                     backgroundImage,
                     0, 0,

@@ -124,5 +124,6 @@ public class DollBot extends Mob {
             g2d.setColor(Color.BLACK);
             g2d.drawRect((int) x, (int) y, width, height);
         }
+        drawHpBar(g2d, width, 3);
     }
 }
