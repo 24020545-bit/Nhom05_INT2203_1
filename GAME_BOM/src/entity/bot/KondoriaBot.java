@@ -4,15 +4,12 @@ import bomb.Bomb;
 import entity.Player;
 import entity.mob.Mob;
 import utils.Direction;
+import utils.BFS;
 import utils.RandomMovement;
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.Image;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.LinkedList;
 import java.util.List;
-import java.util.Queue;
 import javax.swing.ImageIcon;
 
 public class KondoriaBot extends Mob {
@@ -22,23 +19,17 @@ public class KondoriaBot extends Mob {
 
     private final Player[] players;
     private final int[][] mapHash;
+    private final RandomMovement randomMovement;
     private Player currentTarget;
-    private final RandomMovement randomMovement; // Tích hợp RandomMovement vào đây
 
-    private String botName = "KondoriaBot";
-
-    // Vị trí ô đích hiện tại khi đuổi player
+    // Vị trí ô đích hiện tại
     private int targetCol = -1;
     private int targetRow = -1;
     private boolean moving = false;
     private boolean movingIgnoreWalls = false;
 
-    // BFS thoát khỏi tường
-    private final List<int[]> escapePath = new ArrayList<>();
-    private int escapeIndex = 0;
-
     // Thời gian tấn công
-    private final long attackCooldown;
+    private long attackCooldown;
 
     // Animation
     private Image leftImg;
@@ -54,21 +45,10 @@ public class KondoriaBot extends Mob {
         super(x, y, width, height, speed, 0, 0, hp, attackPower);
         this.players = players;
         this.mapHash = mapHash;
+        this.randomMovement = new RandomMovement(x, y, width, height, speed, mapHash);
         this.attackCooldown = attackCooldown;
         this.currentDirection = Direction.LEFT;
-
-        // Khởi tạo RandomMovement cho bot
-        this.randomMovement = new RandomMovement(x, y, width, height, speed, mapHash);
-
         loadImages();
-    }
-
-    public void setBotName(String botName) {
-        this.botName = botName;
-    }
-
-    public String getBotName() {
-        return botName;
     }
 
     // ==================== LOAD IMAGE ====================
@@ -162,25 +142,11 @@ public class KondoriaBot extends Mob {
         }
 
         if (currentTarget != null) {
-            escapePath.clear();
-            escapeIndex = 0;
             chasePlayer();
+        } else if (!canMoveOnFloor(x, y)) {
+            escapeToFloor();
         } else {
-            if (!canMoveOnFloor(x, y)) {
-                if (escapePath.isEmpty()) {
-                    findEscapePath();
-                }
-                escapeToFloor();
-            } else {
-                escapePath.clear();
-                escapeIndex = 0;
-
-                // Gọi trực tiếp RandomMovement để di chuyển ngẫu nhiên bám lưới
-                randomMovement.update(x, y);
-                this.x = randomMovement.getX();
-                this.y = randomMovement.getY();
-                this.currentDirection = randomMovement.getCurrentDirection();
-            }
+            randomMove();
         }
         updateAnimation();
         clampToBounds();
@@ -232,34 +198,39 @@ public class KondoriaBot extends Mob {
     }
 
     // ==================== CHASE PLAYER ====================
+    private boolean insideMap(int col, int row) {
+        return col >= 1 && row >= 1
+                && col < mapHash[0].length - 1
+                && row < mapHash.length - 1;
+    }
+
     private void chasePlayer() {
-        if (currentTarget == null) return;
-        int botCol = getCurrentCol();
-        int botRow = getCurrentRow();
-        int playerCol = (int) ((currentTarget.getX() + currentTarget.getWidth() / 2.0) / TILE_SIZE);
-        int playerRow = (int) ((currentTarget.getY() + currentTarget.getHeight() / 2.0) / TILE_SIZE);
+        if (currentTarget == null || !isValidMap()) return;
+        int endCol = (int) ((currentTarget.getX()
+                + currentTarget.getWidth() / 2.0) / TILE_SIZE);
+        int endRow = (int) ((currentTarget.getY()
+                + currentTarget.getHeight() / 2.0) / TILE_SIZE);
+        if (!insideMap(endCol, endRow)) return;
+        List<int[]> path = BFS.findPath(mapHash, getCurrentCol(), getCurrentRow(),
+                endCol, endRow, this::insideMap);
+        followPath(path);
+    }
 
-        int dx = playerCol - botCol;
-        int dy = playerRow - botRow;
-        if (dx == 0 && dy == 0) return;
-
-        int nextCol = botCol;
-        int nextRow = botRow;
-
-        if (Math.abs(dx) >= Math.abs(dy)) {
-            nextCol += (dx > 0 ? 1 : -1);
-            currentDirection = dx < 0 ? Direction.LEFT : Direction.RIGHT;
-        } else {
-            nextRow += (dy > 0 ? 1 : -1);
-            currentDirection = dy < 0 ? Direction.UP : Direction.DOWN;
+    private void randomMove() {
+        randomMovement.update(x, y);
+        double nextX = randomMovement.getX();
+        double nextY = randomMovement.getY();
+        if (canMoveOnFloor(nextX, nextY)) {
+            x = nextX;
+            y = nextY;
         }
+        currentDirection = randomMovement.getCurrentDirection();
+    }
 
-        if (isBombAtCell(nextCol, nextRow)) {
-            moving = false;
-            return;
-        }
-
-        setTargetCell(nextCol, nextRow, true);
+    private void followPath(List<int[]> path) {
+        if (path.size() < 2) return;
+        int[] next = path.get(1);
+        setTargetCell(next[0], next[1], true);
         moveToTargetCell(true);
     }
 
@@ -357,119 +328,32 @@ public class KondoriaBot extends Mob {
                 && mapHash[0].length > 0;
     }
 
-    // ==================== BFS ESCAPE ====================
-    private void findEscapePath() {
-        escapePath.clear();
-        escapeIndex = 0;
-        if (!isValidMap()) return;
-        int rows = mapHash.length;
-        int cols = mapHash[0].length;
-        int startCol = getCurrentCol();
-        int startRow = getCurrentRow();
-        if (startCol < 1 || startRow < 1
-                || startCol >= cols - 1
-                || startRow >= rows - 1) {
-            return;
-        }
-        boolean[][] visited = new boolean[rows][cols];
-        int[][] parentCol = new int[rows][cols];
-        int[][] parentRow = new int[rows][cols];
-        Queue<int[]> queue = new LinkedList<>();
-        queue.add(new int[]{startCol, startRow});
-        visited[startRow][startCol] = true;
-        int[][] directions = {
-                {0, -1},
-                {0, 1},
-                {-1, 0},
-                {1, 0}
-        };
-        int endCol = -1;
-        int endRow = -1;
-        while (!queue.isEmpty()) {
-            int[] cell = queue.poll();
-            int col = cell[0];
-            int row = cell[1];
-            double floorX = getCellX(col);
-            double floorY = getCellY(row);
-
-            if (isWalkableFloorValue(mapHash[row][col])
-                    && !isBombAtCell(col, row)
-                    && canMoveOnFloor(floorX, floorY)) {
-                endCol = col;
-                endRow = row;
-                break;
-            }
-            for (int[] dir : directions) {
-                int nextCol = col + dir[0];
-                int nextRow = row + dir[1];
-                if (nextCol < 1 || nextRow < 1
-                        || nextCol >= cols - 1
-                        || nextRow >= rows - 1
-                        || visited[nextRow][nextCol]
-                        || isBombAtCell(nextCol, nextRow)) {
-                    continue;
-                }
-                visited[nextRow][nextCol] = true;
-                parentCol[nextRow][nextCol] = col;
-                parentRow[nextRow][nextCol] = row;
-                queue.add(new int[]{nextCol, nextRow});
-            }
-        }
-        if (endCol == -1) return;
-        int col = endCol;
-        int row = endRow;
-        while (col != startCol || row != startRow) {
-            escapePath.add(new int[]{col, row});
-            int previousCol = parentCol[row][col];
-            int previousRow = parentRow[row][col];
-            col = previousCol;
-            row = previousRow;
-        }
-        Collections.reverse(escapePath);
-    }
-
-    // ==================== ESCAPE WALL ====================
     private void escapeToFloor() {
-        if (escapePath.isEmpty() || escapeIndex >= escapePath.size()) {
-            if (canMoveOnFloor(x, y)) {
-                finishEscape();
-            } else {
-                findEscapePath();
-            }
-            return;
+        if (!isValidMap()) return;
+        List<int[]> path = BFS.findNearest(mapHash, getCurrentCol(), getCurrentRow(),
+                (col, row) -> insideMap(col, row) && !isBombAtCell(col, row),
+                (col, row) -> insideMap(col, row)
+                        && isWalkableFloorValue(mapHash[row][col])
+                        && !isBombAtCell(col, row)
+                        && canMoveOnFloor(getCellX(col), getCellY(row)));
+        if (path.size() == 1) {
+            int[] cell = path.get(0);
+            setTargetCell(cell[0], cell[1], true);
+            moveToTargetCell(true);
+        } else {
+            followPath(path);
         }
-        int[] nextCell = escapePath.get(escapeIndex);
-        setTargetCell(nextCell[0], nextCell[1], true);
-        moveToTargetCell(true);
-        if (!moving) {
-            if (canMoveOnFloor(x, y)) {
-                finishEscape();
-            } else {
-                escapeIndex++;
-                if (escapeIndex >= escapePath.size()) {
-                    escapePath.clear();
-                    escapeIndex = 0;
-                    findEscapePath();
-                }
-            }
-        }
-    }
-
-    private void finishEscape() {
-        escapePath.clear();
-        escapeIndex = 0;
-        moving = false;
-        targetCol = -1;
-        targetRow = -1;
     }
 
     // ==================== BOUNDARY ====================
     private void clampToBounds() {
         if (!isValidMap()) return;
+        double minX = TILE_SIZE;
+        double minY = TILE_SIZE;
         double maxX = (mapHash[0].length - 1) * TILE_SIZE - width;
         double maxY = (mapHash.length - 1) * TILE_SIZE - height;
-        x = Math.clamp(x, TILE_SIZE, maxX);
-        y = Math.clamp(y, TILE_SIZE, maxY);
+        x = Math.max(minX, Math.min(x, maxX));
+        y = Math.max(minY, Math.min(y, maxY));
     }
 
     @Override
@@ -496,8 +380,6 @@ public class KondoriaBot extends Mob {
             g2d.setColor(Color.BLACK);
             g2d.drawRect((int) x, (int) y, width, height);
         }
-
-        // Gọi hàm vẽ thanh máu chung từ class cha Mob
-        drawHpBar(g2d, width, 4);
+        drawHpBar(g2d, width, 3);
     }
 }
