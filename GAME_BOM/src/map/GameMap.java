@@ -12,6 +12,8 @@ import javax.swing.ImageIcon;
 
 public class GameMap {
 
+    private static GameMap instance;
+
     public static final int EMPTY = 0;
     public static final int WALL_BRICK = 1;
     public static final int WALL_SOLID = 2;
@@ -25,7 +27,7 @@ public class GameMap {
     private Image wall1Img;
     private Image wall2Img;
 
-    public GameMap() {
+    private GameMap() {
         mapList = new ArrayList<>();
         loadMapImages();
         loadMapsFromFile();
@@ -47,24 +49,20 @@ public class GameMap {
         }
     }
 
-    /**
-     * Tải bản đồ theo Cửa ải (Level):
-     * Cửa ải 1, 2 dùng Map index 0
-     * Cửa ải 3, 4 dùng Map index 1
-     * Cửa ải 5, 6 dùng Map index 2...
-     * Tự động tạo bản sao (Deep Copy) để phá gạch màn trước không làm hỏng màn sau.
-     */
+    public static synchronized GameMap getInstance() {
+        if (instance == null) {
+            instance = new GameMap();
+        }
+        return instance;
+    }
 
     public void loadLevelMap(int levelIndex) {
         if (mapList.isEmpty()) {
             return;
         }
 
-        // Mỗi level sử dụng một bản đồ riêng
         int mapIndex = levelIndex - 1;
 
-        // Nếu level vượt quá số bản đồ hiện có,
-        // sử dụng bản đồ cuối cùng
         if (mapIndex < 0) {
             mapIndex = 0;
         }
@@ -73,43 +71,57 @@ public class GameMap {
             mapIndex = mapList.size() - 1;
         }
 
-        // Tạo bản sao để mỗi lần chơi không ảnh hưởng map gốc
         this.currentGrid = copyGrid(mapList.get(mapIndex));
     }
 
-
-    /**
-     * Phương thức sao chép mảng 2 chiều để tránh gán trùng tham chiếu (Reference)
-     */
     private int[][] copyGrid(int[][] original) {
         if (original == null) return new int[0][0];
-        int height = original.length;
-        int width = original[0].length;
-        int[][] copy = new int[height][width];
 
-        for (int i = 0; i < height; i++) {
-            System.arraycopy(original[i], 0, copy[i], 0, width);
+        int[][] copy = new int[original.length][];
+
+        for (int i = 0; i < original.length; i++) {
+            copy[i] = original[i].clone();
         }
+
         return copy;
     }
 
     private void loadMapImages() {
         try {
-            // Đã kiểm tra fallback cả 2 đường dẫn tránh gõ sai chính tả đường dẫn thư mục
-            var w0 = getClass().getResource("/EnvironmentImgae/wall0.png");
-            if (w0 == null) w0 = getClass().getResource("/EnvironmentImage/wall0.png");
+            var w0 = getClass().getResource(
+                    "/EnvironmentImgae/wall0.png");
 
-            var w1 = getClass().getResource("/EnvironmentImgae/wall1.png");
-            if (w1 == null) w1 = getClass().getResource("/EnvironmentImage/wall1.png");
+            if (w0 == null)
+                w0 = getClass().getResource(
+                        "/EnvironmentImage/wall0.png");
 
-            var w2 = getClass().getResource("/EnvironmentImgae/wall2.png");
-            if (w2 == null) w2 = getClass().getResource("/EnvironmentImage/wall2.png");
+            var w1 = getClass().getResource(
+                    "/EnvironmentImgae/wall1.png");
 
-            wall0Img = (w0 != null) ? new ImageIcon(w0).getImage() : null;
-            wall1Img = (w1 != null) ? new ImageIcon(w1).getImage() : null;
-            wall2Img = (w2 != null) ? new ImageIcon(w2).getImage() : null;
+            if (w1 == null)
+                w1 = getClass().getResource(
+                        "/EnvironmentImage/wall1.png");
+
+            var w2 = getClass().getResource(
+                    "/EnvironmentImgae/wall2.png");
+
+            if (w2 == null)
+                w2 = getClass().getResource(
+                        "/EnvironmentImage/wall2.png");
+
+            wall0Img = (w0 != null)
+                    ? new ImageIcon(w0).getImage() : null;
+
+            wall1Img = (w1 != null)
+                    ? new ImageIcon(w1).getImage() : null;
+
+            wall2Img = (w2 != null)
+                    ? new ImageIcon(w2).getImage() : null;
+
         } catch (Exception e) {
-            System.err.println("Lỗi khi tải ảnh môi trường bản đồ: " + e.getMessage());
+            System.err.println(
+                    "Lỗi khi tải ảnh môi trường bản đồ: "
+                            + e.getMessage());
         }
     }
 
@@ -122,11 +134,14 @@ public class GameMap {
                     .getResourceAsStream("map.txt");
 
             if (is == null) {
-                System.err.println("Không tìm thấy file map.txt trong resources!");
+                System.err.println(
+                        "Không tìm thấy file map.txt trong resources!");
                 return;
             }
 
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(is))) {
+            try (BufferedReader reader =
+                         new BufferedReader(new InputStreamReader(is))) {
+
                 String line;
 
                 while ((line = reader.readLine()) != null) {
@@ -134,7 +149,9 @@ public class GameMap {
 
                     if (line.equals("---")) {
                         if (!currentMapLines.isEmpty()) {
-                            String[] template = currentMapLines.toArray(new String[0]);
+                            String[] template =
+                                    currentMapLines.toArray(new String[0]);
+
                             mapList.add(parseStringToMap(template));
                             currentMapLines.clear();
                         }
@@ -144,13 +161,16 @@ public class GameMap {
                 }
 
                 if (!currentMapLines.isEmpty()) {
-                    String[] template = currentMapLines.toArray(new String[0]);
+                    String[] template =
+                            currentMapLines.toArray(new String[0]);
+
                     mapList.add(parseStringToMap(template));
                 }
             }
 
         } catch (IOException e) {
-            System.err.println("Không thể đọc bản đồ: " + e.getMessage());
+            System.err.println(
+                    "Không thể đọc bản đồ: " + e.getMessage());
         }
     }
 
@@ -189,10 +209,13 @@ public class GameMap {
         if (currentGrid != null) {
             return currentGrid;
         }
+
         if (mapList.isEmpty()) {
             return new int[0][0];
         }
-        return mapList.getFirst();
+
+        currentGrid = copyGrid(mapList.get(0));
+        return currentGrid;
     }
 
     public int getWidth() {
@@ -208,7 +231,6 @@ public class GameMap {
         this.currentGrid = copyGrid(loadedGrid);
     }
 
-    /** Phương thức vẽ bản đồ bằng hình ảnh */
     public void draw(Graphics2D g2d) {
         int[][] grid = getGrid();
         int height = getHeight();
@@ -217,11 +239,10 @@ public class GameMap {
         for (int y = 0; y < height; y++) {
             for (int x = 0; x < width; x++) {
                 int tile = grid[y][x];
-                Image tileImg = null;
+                Image tileImg;
 
-                // Ẩn các ô chứa item (5-9) bên dưới hình gạch/cỏ
                 if (tile >= 5 && tile <= 9) {
-                    tileImg = wall0Img; // Ô chứa item khi chưa nổ gạch thì hiển thị nền cỏ hoặc tường tùy game logic
+                    tileImg = wall0Img;
                 } else {
                     switch (tile) {
                         case WALL_BRICK -> tileImg = wall1Img;
@@ -231,7 +252,14 @@ public class GameMap {
                 }
 
                 if (tileImg != null) {
-                    g2d.drawImage(tileImg, x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE, null);
+                    g2d.drawImage(
+                            tileImg,
+                            x * TILE_SIZE,
+                            y * TILE_SIZE,
+                            TILE_SIZE,
+                            TILE_SIZE,
+                            null
+                    );
                 }
             }
         }
