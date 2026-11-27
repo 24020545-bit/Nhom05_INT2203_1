@@ -1,8 +1,9 @@
-
 package entity.mob;
 
 import utils.Direction;
 
+import java.awt.Color;
+import java.awt.Font;
 import java.awt.Graphics2D;
 import java.awt.Rectangle;
 
@@ -54,6 +55,37 @@ public abstract class Mob {
     public abstract void draw(Graphics2D g2d);
 
     public abstract void move(Direction direction);
+
+    /**
+     * Hàm vẽ thanh máu chung cho mọi Mob (Player, Bot, v.v.) ở class cha.
+     * @param g2d Đối tượng đồ họa Graphics2D
+     * @param barWidth Độ dài (chiều ngang) của thanh máu
+     * @param barHeight Độ rộng (chiều cao) của thanh máu
+     */
+    protected void drawHpBar(Graphics2D g2d, int barWidth, int barHeight) {
+        // Đặt vị trí thanh máu nằm ngay phía trên đầu của Mob
+        int barX = (int) x + (width - barWidth) / 2; // Canh giữa theo chiều ngang của mob
+        int barY = (int) y - barHeight - 4;          // Nằm cách đỉnh mob lên trên một khoảng
+
+        // Vẽ màu nền (máu đã mất / nền tối)
+        g2d.setColor(new Color(100, 0, 0));
+        g2d.fillRect(barX, barY, barWidth, barHeight);
+
+        int currentMaxHp = getMaxHp();
+        if (currentMaxHp <= 0) currentMaxHp = 1;
+
+        // Tính toán phần trăm máu hiện tại
+        double hpPercent = (double) Math.max(0, hp) / currentMaxHp;
+        int currentHpWidth = (int) (barWidth * hpPercent);
+
+        // Vẽ phần máu hiện tại (màu xanh hoặc đỏ tùy ý)
+        g2d.setColor(Color.GREEN);
+        g2d.fillRect(barX, barY, currentHpWidth, barHeight);
+
+        // Viền đen bao quanh thanh máu
+        g2d.setColor(Color.BLACK);
+        g2d.drawRect(barX, barY, barWidth, barHeight);
+    }
 
     // Nhận sát thương
     public void takeDamage(int damage) {

@@ -3,13 +3,14 @@ package entity;
 import bomb.Bomb;
 import entity.mob.Mob;
 import utils.Direction;
-import utils.SoundManager; // THÊM IMPORT
+import utils.SoundManager;
 
 import java.awt.Color;
 import java.awt.Font;
 import java.awt.Graphics2D;
 import java.awt.Image;
 import java.awt.event.KeyEvent;
+import java.util.ArrayList;
 import java.util.List;
 import javax.swing.ImageIcon;
 
@@ -21,6 +22,10 @@ public class Player extends Mob {
     private static final int PLAYER_WIDTH = 20;
     private static final int PLAYER_HEIGHT = 28;
 
+    // QUẢN LÝ BOM RIÊNG CHO TỪNG PLAYER
+    private final List<Bomb> myBombs = new ArrayList<>();
+
+    // Mảng ảnh cho các hướng và trạng thái chết
     private final Image[] downImgs = new Image[4];
     private final Image[] upImgs = new Image[4];
     private final Image[] leftImgs = new Image[4];
@@ -33,7 +38,7 @@ public class Player extends Mob {
     private String playerName = "Player";
 
     public Player(double startX, double startY, int[][] mapHash) {
-        super(startX, startY, PLAYER_WIDTH, PLAYER_HEIGHT, 3, 2, 3, 20, 2);
+        super(startX, startY, PLAYER_WIDTH, PLAYER_HEIGHT, 3, 1, 2, 20, 1);
         this.mapHash = mapHash;
         loadImages();
     }
@@ -46,56 +51,37 @@ public class Player extends Mob {
         return playerName;
     }
 
+    public int getActiveBombCount() {
+        myBombs.removeIf(b -> !b.isActive());
+        return myBombs.size();
+    }
+
+    // ==================== LOAD IMAGE ====================
     private void loadImages() {
-        try {
-            var d1 = getClass().getResource("/PlayerImage/d1.png");
-            var d2 = getClass().getResource("/PlayerImage/d2.png");
-            var d3 = getClass().getResource("/PlayerImage/d3.png");
-            var d4 = getClass().getResource("/PlayerImage/d4.png");
-            downImgs[0] = (d1 != null) ? new ImageIcon(d1).getImage() : null;
-            downImgs[1] = (d2 != null) ? new ImageIcon(d2).getImage() : null;
-            downImgs[2] = (d3 != null) ? new ImageIcon(d3).getImage() : null;
-            downImgs[3] = (d4 != null) ? new ImageIcon(d4).getImage() : null;
+        String basePath = "/PlayerImage/";
 
-            var u1 = getClass().getResource("/PlayerImage/u1.png");
-            var u2 = getClass().getResource("/PlayerImage/u2.png");
-            var u3 = getClass().getResource("/PlayerImage/u3.png");
-            var u4 = getClass().getResource("/PlayerImage/u4.png");
-            upImgs[0] = (u1 != null) ? new ImageIcon(u1).getImage() : null;
-            upImgs[1] = (u2 != null) ? new ImageIcon(u2).getImage() : null;
-            upImgs[2] = (u3 != null) ? new ImageIcon(u3).getImage() : null;
-            upImgs[3] = (u4 != null) ? new ImageIcon(u4).getImage() : null;
+        for (int i = 0; i < 4; i++) {
+            downImgs[i]  = loadImage(basePath + "d" + (i + 1) + ".png");
+            upImgs[i]    = loadImage(basePath + "u" + (i + 1) + ".png");
+            leftImgs[i]  = loadImage(basePath + "l" + (i + 1) + ".png");
+            rightImgs[i] = loadImage(basePath + "r" + (i + 1) + ".png");
+        }
 
-            var l1 = getClass().getResource("/PlayerImage/l1.png");
-            var l2 = getClass().getResource("/PlayerImage/l2.png");
-            var l3 = getClass().getResource("/PlayerImage/l3.png");
-            var l4 = getClass().getResource("/PlayerImage/l4.png");
-            leftImgs[0] = (l1 != null) ? new ImageIcon(l1).getImage() : null;
-            leftImgs[1] = (l2 != null) ? new ImageIcon(l2).getImage() : null;
-            leftImgs[2] = (l3 != null) ? new ImageIcon(l3).getImage() : null;
-            leftImgs[3] = (l4 != null) ? new ImageIcon(l4).getImage() : null;
-
-            var r1 = getClass().getResource("/PlayerImage/r1.png");
-            var r2 = getClass().getResource("/PlayerImage/r2.png");
-            var r3 = getClass().getResource("/PlayerImage/r3.png");
-            var r4 = getClass().getResource("/PlayerImage/r4.png");
-            rightImgs[0] = (r1 != null) ? new ImageIcon(r1).getImage() : null;
-            rightImgs[1] = (r2 != null) ? new ImageIcon(r2).getImage() : null;
-            rightImgs[2] = (r3 != null) ? new ImageIcon(r3).getImage() : null;
-            rightImgs[3] = (r4 != null) ? new ImageIcon(r4).getImage() : null;
-
-            var dead1 = getClass().getResource("/PlayerImage/dead1.png");
-            var dead2 = getClass().getResource("/PlayerImage/dead2.png");
-            var dead3 = getClass().getResource("/PlayerImage/dead3.png");
-            deads[0] = (dead1 != null) ? new ImageIcon(dead1).getImage() : null;
-            deads[1] = (dead2 != null) ? new ImageIcon(dead2).getImage() : null;
-            deads[2] = (dead3 != null) ? new ImageIcon(dead3).getImage() : null;
-
-        } catch (Exception e) {
-            System.err.println("Lỗi khi tải ảnh player: " + e.getMessage());
+        for (int i = 0; i < 3; i++) {
+            deads[i] = loadImage(basePath + "dead" + (i + 1) + ".png");
         }
     }
 
+    private Image loadImage(String path) {
+        var url = getClass().getResource(path);
+        if (url == null) {
+            System.err.println("Không tìm thấy ảnh player: " + path);
+            return null;
+        }
+        return new ImageIcon(url).getImage();
+    }
+
+    // ==================== DRAW ====================
     @Override
     public void draw(Graphics2D g2d) {
         if (!survival) {
@@ -120,33 +106,16 @@ public class Player extends Mob {
             g2d.fillRect((int) x, (int) y, width, height);
         }
 
-        // Vẽ tên và thanh HP trên đầu Player
-        g2d.setFont(new Font("Arial", Font.BOLD, 20));
-
+        // Vẽ tên của Player lên trên đầu
+        g2d.setFont(new Font("Arial", Font.BOLD, 13));
         g2d.setColor(Color.YELLOW);
         g2d.drawString(playerName, (int) x - 2, (int) y - 12);
 
-        int barWidth = width;
-        int barHeight = 4;
-        int barX = (int) x;
-        int barY = (int) y - 8;
-
-        g2d.setColor(new Color(100, 0, 0));
-        g2d.fillRect(barX, barY, barWidth, barHeight);
-
-        int maxHp = getMaxHp();
-        if (maxHp <= 0) maxHp = 1;
-
-        double hpPercent = (double) Math.max(0, hp) / maxHp;
-        int currentHpWidth = (int) (barWidth * hpPercent);
-
-        g2d.setColor(Color.GREEN);
-        g2d.fillRect(barX, barY, currentHpWidth, barHeight);
-
-        g2d.setColor(Color.BLACK);
-        g2d.drawRect(barX, barY, barWidth, barHeight);
+        // Gọi hàm vẽ thanh máu từ class cha Mob (độ dài bằng width của player, chiều cao là 4)
+        drawHpBar(g2d, width, 4);
     }
 
+    // ==================== INPUT HANDLING ====================
     public void handleKeyPressed(KeyEvent e, List<Bomb> globalBombs) {
         int key = e.getKeyCode();
         if (key == KeyEvent.VK_W || key == KeyEvent.VK_UP)    { goUp = true; }
@@ -170,10 +139,10 @@ public class Player extends Mob {
         }
     }
 
+    // ==================== COLLISION & TILE CHECK ====================
     private boolean isValidPosition(double nextX, double nextY) {
         if (mapHash == null) return true;
 
-        // Thu nhỏ nhẹ hitbox (padding = 3) để dễ dàng lách qua khe hẹp
         int padding = 3;
         int leftTile = (int) ((nextX + padding) / TILE_SIZE);
         int rightTile = (int) ((nextX + width - padding - 1) / TILE_SIZE);
@@ -191,14 +160,16 @@ public class Player extends Mob {
     }
 
     private boolean isWalkable(int tileValue) {
-        // 0: đường trống, 3: bom vừa đặt (cho phép bước ra), 5..9: item
-        // 1: tường gạch, 2: tường cứng, 4: bom cứng -> chặn
         return tileValue == 0 || tileValue == 3 || (tileValue >= 5 && tileValue <= 9);
     }
 
+    // ==================== UPDATE ====================
     @Override
     public void update() {
         if (!survival) return;
+
+        myBombs.removeIf(b -> !b.isActive());
+
         boolean isMoving = false;
 
         if (goLeft) {
@@ -230,9 +201,7 @@ public class Player extends Mob {
         }
     }
 
-    /**
-     * Chia nhỏ bước đi từng pixel và hỗ trợ trượt góc mượt mà (corner sliding)
-     */
+    // ==================== MOVEMENT & SLIDING ====================
     private void moveWithSlide(int dx, int dy) {
         int steps = Math.max(Math.abs(dx), Math.abs(dy));
         int stepX = Integer.compare(dx, 0);
@@ -243,7 +212,6 @@ public class Player extends Mob {
                 x += stepX;
                 y += stepY;
             } else {
-                // Cơ chế trượt góc thông minh khi vướng tường
                 if (stepX != 0) {
                     if (isValidPosition(x + stepX, y - 1)) { y -= 1; x += stepX; }
                     else if (isValidPosition(x + stepX, y + 1)) { y += 1; x += stepX; }
@@ -256,12 +224,11 @@ public class Player extends Mob {
         }
     }
 
+    // ==================== BOMB ACTION ====================
     public void dropBomb(int[][] mapHash, List<Bomb> globalBombList) {
-        long activeCount = globalBombList.stream()
-                .filter(Bomb::isActive)
-                .count();
+        myBombs.removeIf(b -> !b.isActive());
 
-        if (activeCount < getBombLimit()) {
+        if (myBombs.size() < getBombLimit()) {
             int bombX = (int) ((x + width / 2.0) / TILE_SIZE) * TILE_SIZE;
             int bombY = (int) ((y + height / 2.0) / TILE_SIZE) * TILE_SIZE;
 
@@ -271,8 +238,8 @@ public class Player extends Mob {
             if (!alreadyHasBomb) {
                 Bomb newBomb = new Bomb(bombX, bombY, mapHash, globalBombList, this.power, this.attackPower);
                 globalBombList.add(newBomb);
+                myBombs.add(newBomb);
 
-                // THÊM: Gọi hàm phát âm thanh đặt bom
                 SoundManager.playSoundEffect("/audio/putbomb.wav");
             }
         }

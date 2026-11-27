@@ -87,11 +87,11 @@ public class LevelSelectScreen extends JPanel {
 
         // 2. Co giãn khoảng cách giữa các ô (47, 25 gốc) và viền bảng (15, 167, 13, 179 gốc bạn đã căn)
         gridLayout.setHgap((int) Math.round(47 * scaleX));
-        gridLayout.setVgap((int) Math.round(25 * scaleY));
+        gridLayout.setVgap((int) Math.round(22 * scaleY));
         gridPanel.setBorder(BorderFactory.createEmptyBorder(
-                (int) Math.round(15 * scaleY),
+                (int) Math.round(16 * scaleY),
                 (int) Math.round(167 * scaleX),
-                (int) Math.round(13 * scaleY),
+                (int) Math.round(15 * scaleY),
                 (int) Math.round(179 * scaleX)
         ));
 

@@ -1,3 +1,4 @@
+
 package ui.screen;
 
 import ui.GameFrame;
@@ -6,63 +7,86 @@ import javax.swing.*;
 import java.awt.*;
 
 public class KeyBindScreen extends JPanel {
+
+    private Image backgroundImage;
+    private JButton backBtn;
+
     public KeyBindScreen(GameFrame frame) {
-        setLayout(new BorderLayout());
-        setBackground(Color.DARK_GRAY);
 
-        JLabel title = new JLabel("THIẾT LẬP PHÍM ĐIỀU KHIỂN", JLabel.CENTER);
-        title.setFont(new Font("Arial", Font.BOLD, 22));
-        title.setForeground(Color.WHITE);
-        title.setBorder(BorderFactory.createEmptyBorder(20, 0, 10, 0));
-        add(title, BorderLayout.NORTH);
+        // Đọc ảnh nền
+        java.net.URL imageURL =
+                getClass().getResource("/Screen/KeyBindScreen.png");
 
-        JPanel content = new JPanel(new GridLayout(6, 1, 5, 5));
-        content.setOpaque(false);
-        content.setBorder(BorderFactory.createEmptyBorder(10, 100, 10, 100));
+        if (imageURL != null) {
+            backgroundImage = new ImageIcon(imageURL).getImage();
+        } else {
+            System.out.println("Không tìm thấy KeyBindScreen.png");
+        }
 
-        // Người chơi 1
-        content.add(createSectionHeader("--- NGƯỜI CHƠI 1 ---", Color.CYAN));
-        content.add(createKeyRow("Di chuyển:", "W, A, S, D"));
-        content.add(createKeyRow("Đặt bom:", "Phím SPACE"));
+        // Sử dụng null layout để đặt nút đúng vị trí trên ảnh
+        setLayout(null);
 
-        // Người chơi 2
-        content.add(createSectionHeader("--- NGƯỜI CHƠI 2 ---", Color.ORANGE));
-        content.add(createKeyRow("Di chuyển:", "Các phím Mũi Tên"));
-        content.add(createKeyRow("Đặt bom:", "Phím ENTER"));
+        // Tạo nút quay lại
+        backBtn = new JButton();
 
-        add(content, BorderLayout.CENTER);
+        // Nút trong suốt vì hình ảnh đã có sẵn nút Quay lại
+        backBtn.setOpaque(false);
+        backBtn.setContentAreaFilled(false);
+        backBtn.setBorderPainted(false);
+        backBtn.setFocusPainted(false);
 
-        JPanel bottom = new JPanel();
-        bottom.setOpaque(false);
-        bottom.setBorder(BorderFactory.createEmptyBorder(0, 0, 20, 0));
-        JButton backBtn = new JButton("Quay lại");
-        backBtn.setPreferredSize(new Dimension(120, 35));
-        backBtn.addActionListener(e -> frame.showScreen("HOME"));
-        bottom.add(backBtn);
+        backBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
-        add(bottom, BorderLayout.SOUTH);
+        // Quay lại màn hình chính
+        backBtn.addActionListener(e ->
+                frame.showScreen("HOME"));
+
+        add(backBtn);
     }
 
-    private JLabel createSectionHeader(String text, Color color) {
-        JLabel lbl = new JLabel(text);
-        lbl.setForeground(color);
-        lbl.setFont(new Font("Arial", Font.BOLD, 15));
-        return lbl;
+    // Căn chỉnh nút theo kích thước màn hình
+    @Override
+    public void doLayout() {
+
+        int w = getWidth();
+        int h = getHeight();
+
+        // Vị trí nút Quay lại trên ảnh nền
+        backBtn.setBounds(
+                (int) (w * 0.40),
+                (int) (h * 0.84),
+                (int) (w * 0.20),
+                (int) (h * 0.12)
+        );
     }
 
-    private JPanel createKeyRow(String action, String key) {
-        JPanel row = new JPanel(new BorderLayout());
-        row.setOpaque(false);
-        JLabel lblAction = new JLabel(action);
-        lblAction.setForeground(Color.WHITE);
-        lblAction.setFont(new Font("Arial", Font.PLAIN, 14));
+    // Vẽ ảnh nền
+    @Override
+    protected void paintComponent(Graphics g) {
 
-        JLabel lblKey = new JLabel(key);
-        lblKey.setForeground(Color.YELLOW);
-        lblKey.setFont(new Font("Arial", Font.BOLD, 14));
+        super.paintComponent(g);
 
-        row.add(lblAction, BorderLayout.WEST);
-        row.add(lblKey, BorderLayout.EAST);
-        return row;
+        if (backgroundImage != null) {
+
+            Graphics2D g2d = (Graphics2D) g.create();
+
+            // Chất lượng hiển thị ảnh
+            g2d.setRenderingHint(
+                    RenderingHints.KEY_INTERPOLATION,
+                    RenderingHints.VALUE_INTERPOLATION_BILINEAR
+            );
+
+            // Vẽ ảnh phủ toàn bộ JPanel
+            g2d.drawImage(
+                    backgroundImage,
+                    0,
+                    0,
+                    getWidth(),
+                    getHeight(),
+                    this
+            );
+
+            g2d.dispose();
+        }
     }
 }

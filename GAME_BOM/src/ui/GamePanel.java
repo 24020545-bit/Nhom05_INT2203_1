@@ -51,7 +51,7 @@ public class GamePanel extends JPanel {
         setBackground(Color.DARK_GRAY);
 
         Mobs.MOBS.clear();
-        gameMap = GameMap.getInstance();
+        gameMap = new GameMap();
         gameMap.loadLevelMap(levelIndex);
 
         activeBombs = new ArrayList<>();

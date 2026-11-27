@@ -80,24 +80,24 @@ public class GameFrame extends JFrame {
         }
     }
 
+
     public void showScreen(String name) {
+
         if (name.equals("LEVEL_SELECT")) {
-            // Đổi sang kích thước 1024x576 khớp với tỷ lệ ảnh nền Chọn Cửa Ải
-            setSize(1024, 576);
-            setLocationRelativeTo(null);
-            // Gọi buildLevelButtons() để cập nhật trạng thái mở/khóa mới nhất của các ải
+            // Cập nhật trạng thái mở/khóa của các ải
             levelSelectScreen.buildLevelButtons();
-        } else if (name.equals("HOME") || name.equals("GAME_SETTING") || name.equals("KEY_BIND")) {
-            // Trả về kích thước 800x600 cho các màn hình menu khác (hoặc đổi thành 1024, 576 nếu bạn muốn đồng bộ tất cả)
-            setSize(800, 600);
-            setLocationRelativeTo(null);
         }
 
-        // Tiếp tục bật nhạc nếu đang ở các màn hình menu
-        if (name.equals("HOME") || name.equals("GAME_SETTING") || name.equals("KEY_BIND") || name.equals("LEVEL_SELECT")) {
+        // Bật nhạc ở các màn hình menu
+        if (name.equals("HOME")
+                || name.equals("GAME_SETTING")
+                || name.equals("KEY_BIND")
+                || name.equals("LEVEL_SELECT")) {
+
             playMenuMusic();
         }
 
+        // Chuyển màn hình
         cardLayout.show(containerPanel, name);
     }
 
